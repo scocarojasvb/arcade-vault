@@ -18,7 +18,7 @@
   --line: rgba(0, 245, 255, 0.18);
   --line-2: rgba(255, 255, 255, 0.06);
   --pixel: var(--font-pixel), "Press Start 2P", system-ui, monospace;
-  --mono: var(--font-mono), "JetBrains Mono", "Courier Prime", "Courier New", monospace;
+  --mono: var(--font-mono), var(--font-courier), "Courier New", monospace;
 
   --background: var(--bg);
   --foreground: var(--ink);
