@@ -139,7 +139,7 @@ export default function GamePlayerPage() {
               <button className="btn" onClick={restart}>
                 JUGAR DE NUEVO
               </button>
-              <Link href="/" className="btn magenta">
+              <Link href="/biblioteca" className="btn magenta">
                 VOLVER AL VAULT
               </Link>
             </div>
