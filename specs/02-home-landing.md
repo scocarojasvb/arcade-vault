@@ -36,7 +36,7 @@ Esta spec no introduce estructuras de datos nuevas: reutiliza `GAMES` de `app/da
 5. Crear `app/page.tsx` (nuevo Home): migra el JSX completo de `home.jsx` (hero, why, games preview con `MiniCard`, stats, actividad en vivo con arrays hardcodeados, precios, CTA final), usando `next/link`/`useRouter` en vez de `navigate()`, y `GAMES.slice(0, 6)` para la sección de juegos.
 6. Actualizar `app/components/nav.tsx`: agregar link "Inicio" → `/`, cambiar "Biblioteca" → `/biblioteca`, actualizar `isActive` (Inicio activo solo en `/`; Biblioteca activa en `/biblioteca` y `/juego/*`), en el menú de escritorio y el panel móvil.
 7. Actualizar el logo del Nav para que siga apuntando a `/` (ahora Home, antes Biblioteca) — sin cambios de código, solo confirmar que sigue siendo correcto.
-8. Actualizar enlaces que asumían `/` como Biblioteca: botón "VOLVER AL VAULT" en `app/juego/[id]/page.tsx`, y las redirecciones tras login/invitado en `app/auth/page.tsx` (deben apuntar a `/biblioteca`, no a `/`).
+8. Actualizar enlaces que asumían `/` como Biblioteca: botón "VOLVER AL VAULT" en `app/juego/[id]/page.tsx`, las redirecciones tras login/invitado en `app/auth/page.tsx` (deben apuntar a `/biblioteca`, no a `/`). **Ampliación encontrada durante la implementación:** también existían "VOLVER A LA BIBLIOTECA" en `app/salon-de-la-fama/page.tsx` y "VOLVER AL VAULT" en `app/juego/[id]/jugar/page.tsx`, ambos apuntando a `/` — se actualizan igualmente a `/biblioteca`.
 9. Revisión final: recorrer las 6 rutas (`/`, `/biblioteca`, `/juego/[id]`, `/juego/[id]/jugar`, `/auth`, `/salon-de-la-fama`) verificando que ningún enlace quede roto ni apunte a la ruta equivocada.
 
 ## Acceptance criteria
