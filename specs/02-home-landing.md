@@ -1,6 +1,6 @@
 # SPEC 02 — Home (landing page)
 
-> **Estado:** Approved
+> **Estado:** Implementado
 > **Depende de:** [01-mvp-visual](01-mvp-visual.md)
 > **Fecha:** 2026-07-23
 > **Objetivo:** Migrar la landing page (`home.jsx`) de `references/templates/home-about/` a una ruta real `/` de Next.js App Router, moviendo la Biblioteca actual a `/biblioteca` y actualizando el Nav para distinguir "Inicio" de "Biblioteca".
