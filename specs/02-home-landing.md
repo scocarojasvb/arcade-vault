@@ -14,7 +14,7 @@
 - Actualizar `app/components/nav.tsx`: agregar link "Inicio" apuntando a `/`, cambiar el link "Biblioteca" para apuntar a `/biblioteca`, y ajustar `isActive` para que "Inicio" solo esté activo en `/` y "Biblioteca" en `/biblioteca` y `/juego/*`.
 - Actualizar todos los enlaces internos existentes que asumían que `/` era la Biblioteca (ej. "VOLVER AL VAULT" en `/juego/[id]`, logo del Nav, redirecciones tras login/guest en `/auth`) para que apunten a `/biblioteca` donde corresponda.
 - Animación de aparición al hacer scroll (`useReveal`, `IntersectionObserver` + clase `.reveal`/`.in`), migrada tal cual del template.
-- Estilos: el CSS de home (`.home`, `.home-hero`, `.home-section`, `.home-stats`, `.home-final`, `.feature-grid`, `.mini-rail`, etc.) ya está portado en `app/globals.css` desde la spec 01 — no requiere cambios de CSS, solo verificar que se use correctamente.
+- Estilos: portar a `app/globals.css` el CSS de home (`.home`, `.home-hero`, `.home-section`, `.home-stats`, `.home-final`, `.feature-grid`, `.mini-rail`, `.mini-card`, `.reveal`, sección "Actividad" — `.activity-grid`, `.ticker`, `.top-list`, etc. — y sección "Precios" — `.pricing-grid`, `.price-card`, `.pricing-faq`, etc.) desde `references/templates/home-about/styles.css`. **Corrección respecto a la redacción original de esta spec:** se asumía que este CSS ya estaba portado desde la spec 01, pero al implementar se verificó que no era así (ninguna de esas clases existía en `app/globals.css`); se añade explícitamente al scope.
 
 **Out of scope (para futuros specs):**
 
