@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Press_Start_2P, JetBrains_Mono, Courier_Prime } from "next/font/google";
 import "./globals.css";
+import { AuthProvider } from "./auth-context";
 
 const pixelFont = Press_Start_2P({
   variable: "--font-pixel",
@@ -35,11 +36,13 @@ export default function RootLayout({
       className={`${pixelFont.variable} ${monoFont.variable} ${courierFont.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <div className="av-bg" />
-        <div className="av-noise" />
-        <div id="root">
-          <main className="av-main">{children}</main>
-        </div>
+        <AuthProvider>
+          <div className="av-bg" />
+          <div className="av-noise" />
+          <div id="root">
+            <main className="av-main">{children}</main>
+          </div>
+        </AuthProvider>
       </body>
     </html>
   );
