@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { GAMES, CATS } from "./data/games";
-import { GameCard } from "./components/game-card";
+import { GAMES, CATS } from "../data/games";
+import { GameCard } from "../components/game-card";
 
 export default function Home() {
   const [q, setQ] = useState("");
