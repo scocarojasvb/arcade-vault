@@ -1,6 +1,6 @@
 # SPEC 01 — MVP visual de Arcade Vault
 
-> **Estado:** Approved
+> **Estado:** Implementado
 > **Depende de:** —
 > **Fecha:** 2026-07-23
 > **Objetivo:** Implementar la interfaz visual completa de Arcade Vault (biblioteca, detalle de juego, reproductor simulado, autenticación y salón de la fama) migrando los templates de `references/templates/` a rutas reales de Next.js App Router con datos mock, sin lógica de juego real.
