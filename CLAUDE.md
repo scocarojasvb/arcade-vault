@@ -16,16 +16,11 @@ This project runs **Next.js 16.2.11 / React 19.2.4**, which has real breaking ch
 
 When in doubt about an API's current shape, grep the docs under `node_modules/next/dist/docs/` rather than relying on prior knowledge of Next.js.
 
-## Commands
-
-```bash
-npm run dev      # start dev server (Turbopack, default)
-npm run build    # production build (Turbopack, default)
-npm run start    # run production build
-npm run lint     # eslint
-```
-
 There is no test runner configured in `package.json` yet.
+
+## Skills
+
+Usa siempre /frontend-design para diseñar la interfaz de usuario.
 
 ## Architecture
 
