@@ -16,15 +16,38 @@ export default function AcercaDe() {
   const [form, setForm] = useState({ name: "", email: "", msg: "" });
   const [sent, setSent] = useState<string | null>(null);
   const [shake, setShake] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const onSubmit = (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name.trim() || !form.email.trim() || !form.msg.trim()) {
       setShake(true);
       setTimeout(() => setShake(false), 400);
       return;
     }
-    setSent(form.name.trim());
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const res = await fetch("/api/contacto", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json();
+
+      if (data.ok) {
+        setSent(form.name.trim());
+      } else {
+        setError(data.error ?? "No se pudo enviar el mensaje, intenta de nuevo.");
+      }
+    } catch {
+      setError("No se pudo enviar el mensaje, intenta de nuevo.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -92,7 +115,10 @@ export default function AcercaDe() {
                   <label>MENSAJE</label>
                   <textarea rows={5} value={form.msg} onChange={(e) => setForm({ ...form, msg: e.target.value })} placeholder="Cuéntanos qué tienes en mente…"></textarea>
                 </div>
-                <button className="btn xl press" type="submit" style={{ width: "100%" }}>▶  ENVIAR MENSAJE</button>
+                <button className="btn xl press" type="submit" style={{ width: "100%" }} disabled={loading}>
+                  {loading ? "ENVIANDO…" : "▶  ENVIAR MENSAJE"}
+                </button>
+                {error && <p className="contact-error">{error}</p>}
               </>
             ) : (
               <div className="terminal-success">
