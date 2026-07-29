@@ -1,6 +1,6 @@
 # SPEC 05 — Juego Asteroids
 
-> **Estado:** Approved
+> **Estado:** Implementado
 > **Depende de:** ninguna spec previa (independiente)
 > **Fecha:** 2026-07-29
 > **Objetivo:** Agregar un nuevo juego "ASTEROIDS" al catálogo de Arcade Vault, portando a TypeScript el juego de canvas vanilla JS en `references/started-games/02-asteroids` como componente cliente de Next.js, integrado con el HUD, la pausa y el flujo de guardado de puntuación ya existentes en `/juego/[id]/jugar`.
