@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createClient } from "./lib/supabase/client";
 
 export interface User {
   name: string;
@@ -33,11 +34,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       setUser(null);
     }
-    try {
-      setScores(JSON.parse(localStorage.getItem("av_scores") || "[]"));
-    } catch {
-      setScores([]);
-    }
   }, []);
 
   const login = (u: User) => {
@@ -55,11 +51,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const saveScore = (entry: Omit<SavedScore, "at">) => {
-    const next = [...scores, { ...entry, at: Date.now() }];
-    setScores(next);
-    try {
-      localStorage.setItem("av_scores", JSON.stringify(next));
-    } catch {}
+    setScores((prev) => [...prev, { ...entry, at: Date.now() }]);
+    const supabase = createClient();
+    supabase
+      .from("scores")
+      .insert({ game_id: entry.game, name: entry.name, score: entry.score, user_id: null })
+      .then(({ error }) => {
+        if (error) console.error("saveScore: insert failed", error);
+      });
   };
 
   return (
