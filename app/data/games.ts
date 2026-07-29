@@ -67,6 +67,17 @@ export const GAMES: Game[] = [
     plays: "18.0K",
   },
   {
+    id: "asteroids",
+    title: "ASTEROIDS",
+    short: "Sobrevive al campo de rocas en gravedad cero.",
+    long: "Pilota tu nave triangular entre esquirlas de roca a la deriva. Rota, propulsa y dispara para partir cada asteroide en fragmentos más pequeños, recoge el power-up de disparo triple y aguanta tanto como puedas antes de que las rocas te alcancen.",
+    cat: "SHOOTER",
+    cover: "cover-asteroids",
+    color: "yellow",
+    best: 0,
+    plays: "0",
+  },
+  {
     id: "rocas",
     title: "ROCAS",
     short: "Pulveriza asteroides en gravedad cero.",
