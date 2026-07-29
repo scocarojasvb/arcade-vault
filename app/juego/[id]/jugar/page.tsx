@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { GAMES } from "../../../data/games";
+import { GAMES, fetchGame, type Game } from "../../../data/games";
 import { useAuth } from "../../../auth-context";
 import AsteroidsGame from "../../../games/asteroids/asteroids-game";
 
@@ -11,8 +11,13 @@ export default function GamePlayerPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { user, saveScore } = useAuth();
-  const game = GAMES.find((g) => g.id === id);
-  const isAsteroids = game?.id === "asteroids";
+  const [asteroidsGame, setAsteroidsGame] = useState<Game | null>(null);
+  const game = id === "asteroids" ? asteroidsGame : GAMES.find((g) => g.id === id);
+  const isAsteroids = id === "asteroids";
+
+  useEffect(() => {
+    if (id === "asteroids") fetchGame("asteroids").then(setAsteroidsGame);
+  }, [id]);
 
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(3);

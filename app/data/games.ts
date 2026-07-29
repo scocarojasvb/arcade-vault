@@ -1,3 +1,5 @@
+import { createClient } from "../lib/supabase/client";
+
 export interface Game {
   id: string;
   title: string;
@@ -113,3 +115,10 @@ export const GAMES: Game[] = [
 ];
 
 export const CATS: string[] = ["TODOS", "ARCADE", "PUZZLE", "SHOOTER", "VERSUS"];
+
+export async function fetchGame(id: string): Promise<Game | null> {
+  const supabase = createClient();
+  const { data, error } = await supabase.from("games").select("*").eq("id", id).single();
+  if (error) return null;
+  return data as Game;
+}
