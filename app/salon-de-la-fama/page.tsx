@@ -2,14 +2,22 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { GAMES } from "../data/games";
+import { fetchGame, type Game } from "../data/games";
+import { REAL_GAME_IDS } from "../data/real-games";
 import { fetchTopScores, type ScoreRow } from "../data/scores";
 import { useAuth } from "../auth-context";
 
 export default function HallOfFamePage() {
   const { user } = useAuth();
-  const [tab, setTab] = useState(GAMES[0].id);
+  const [games, setGames] = useState<Game[]>([]);
+  const [tab, setTab] = useState<string>(REAL_GAME_IDS[0]);
   const [rows, setRows] = useState<ScoreRow[]>([]);
+
+  useEffect(() => {
+    Promise.all(REAL_GAME_IDS.map((id) => fetchGame(id))).then((results) =>
+      setGames(results.filter((g): g is Game => g !== null)),
+    );
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -21,7 +29,7 @@ export default function HallOfFamePage() {
     };
   }, [tab]);
 
-  const game = GAMES.find((g) => g.id === tab)!;
+  const game = games.find((g) => g.id === tab);
   const youRank = user ? Math.floor(8 + (tab.length % 4)) : null;
   const youScore = user ? rows[5]?.score - 2400 : null;
 
@@ -35,7 +43,7 @@ export default function HallOfFamePage() {
       </div>
 
       <div className="hall-tabs">
-        {GAMES.map((g) => (
+        {games.map((g) => (
           <button
             key={g.id}
             className={"chip" + (tab === g.id ? " active" : "")}
@@ -108,7 +116,7 @@ export default function HallOfFamePage() {
                 <div className="dt">{r.date}</div>
               </div>
             ))}
-            {user && (
+            {user && game && (
               <>
                 <div className="tr you-label">▸ TU MEJOR MARCA EN {game.title}</div>
                 <div className="tr you" style={{ animationDelay: `${rows.length * 50 + 50}ms` }}>
