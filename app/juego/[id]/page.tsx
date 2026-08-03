@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { GAMES, fetchGame } from "../../data/games";
+import { fetchGame } from "../../data/games";
+import { REAL_GAME_IDS } from "../../data/real-games";
 import { fetchTopScores } from "../../data/scores";
 
 export default async function GameDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const game = id === "asteroids" ? await fetchGame(id) : GAMES.find((g) => g.id === id);
+  const isRealGame = (REAL_GAME_IDS as readonly string[]).includes(id);
+  const game = isRealGame ? await fetchGame(id) : null;
   if (!game) notFound();
 
   const scores = await fetchTopScores(id, 12);

@@ -5,30 +5,33 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { GAMES, fetchGame, type Game } from "../../../data/games";
 import { useAuth } from "../../../auth-context";
-import AsteroidsGame from "../../../games/asteroids/asteroids-game";
+import { REAL_GAME_IDS } from "../../../data/real-games";
+import { REAL_GAME_COMPONENTS, type RealGameState } from "../../../games/registry";
 
 export default function GamePlayerPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { user, saveScore } = useAuth();
-  const [asteroidsGame, setAsteroidsGame] = useState<Game | null>(null);
-  const game = id === "asteroids" ? asteroidsGame : GAMES.find((g) => g.id === id);
-  const isAsteroids = id === "asteroids";
+  const isRealGame = (REAL_GAME_IDS as readonly string[]).includes(id);
+  const [realGame, setRealGame] = useState<Game | null>(null);
+  const game = isRealGame ? realGame : GAMES.find((g) => g.id === id);
 
   useEffect(() => {
-    if (id === "asteroids") fetchGame("asteroids").then(setAsteroidsGame);
-  }, [id]);
+    if (isRealGame) fetchGame(id).then(setRealGame);
+  }, [id, isRealGame]);
 
   const [score, setScore] = useState(0);
-  const [lives, setLives] = useState(3);
+  const [lives, setLives] = useState<number | undefined>(3);
+  const [lines, setLines] = useState<number | undefined>(undefined);
   const [level, setLevel] = useState(1);
   const [paused, setPaused] = useState(false);
   const [over, setOver] = useState(false);
   const [name, setName] = useState(user ? user.name : "INVITADO");
   const [saved, setSaved] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
-    if (isAsteroids || over || paused) return;
+    if (isRealGame || over || paused) return;
     const t = setInterval(() => {
       setScore((s) => {
         const next = s + Math.floor(10 + Math.random() * 90);
@@ -37,7 +40,7 @@ export default function GamePlayerPage() {
       });
     }, 220);
     return () => clearInterval(t);
-  }, [isAsteroids, over, paused]);
+  }, [isRealGame, over, paused]);
 
   if (!game) return null;
 
@@ -45,22 +48,27 @@ export default function GamePlayerPage() {
   const restart = () => {
     setScore(0);
     setLives(3);
+    setLines(undefined);
     setLevel(1);
     setPaused(false);
     setOver(false);
     setSaved(false);
+    setAttempt((a) => a + 1);
   };
 
-  const handleStateChange = (state: { score: number; lives: number; level: number }) => {
+  const handleStateChange = (state: RealGameState) => {
     setScore(state.score);
-    setLives(state.lives);
     setLevel(state.level);
+    setLives(state.lives);
+    setLines(state.lines);
   };
 
   const handleGameOver = (finalScore: number) => {
     setScore(finalScore);
     setOver(true);
   };
+
+  const RealGameComponent = isRealGame ? REAL_GAME_COMPONENTS[id] : undefined;
 
   return (
     <div className="av-player fade-in">
@@ -76,10 +84,17 @@ export default function GamePlayerPage() {
             <div className="l">Puntuación</div>
             <div className="v">{score.toLocaleString("es-ES")}</div>
           </div>
-          <div className="hud-stat lives">
-            <div className="l">Vidas</div>
-            <div className="v">{"♥ ".repeat(lives).trim() || "—"}</div>
-          </div>
+          {lines !== undefined ? (
+            <div className="hud-stat lines">
+              <div className="l">Líneas</div>
+              <div className="v">{lines}</div>
+            </div>
+          ) : (
+            <div className="hud-stat lives">
+              <div className="l">Vidas</div>
+              <div className="v">{"♥ ".repeat(lives ?? 0).trim() || "—"}</div>
+            </div>
+          )}
           <div className="hud-stat level">
             <div className="l">Nivel</div>
             <div className="v">{String(level).padStart(2, "0")}</div>
@@ -100,8 +115,9 @@ export default function GamePlayerPage() {
 
       <div className="crt">
         <div className="crt-screen">
-          {isAsteroids ? (
-            <AsteroidsGame
+          {RealGameComponent ? (
+            <RealGameComponent
+              key={attempt}
               paused={paused}
               onStateChange={handleStateChange}
               onGameOver={handleGameOver}

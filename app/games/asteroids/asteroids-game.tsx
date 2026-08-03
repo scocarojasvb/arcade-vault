@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import type { RealGameProps } from "../registry";
 
 const W = 800;
 const H = 600;
@@ -307,13 +308,7 @@ class Particle {
 
 type GameState = "playing" | "dead" | "gameover";
 
-interface AsteroidsGameProps {
-  paused: boolean;
-  onStateChange: (state: { score: number; lives: number; level: number }) => void;
-  onGameOver: (finalScore: number) => void;
-}
-
-export default function AsteroidsGame({ paused, onStateChange, onGameOver }: AsteroidsGameProps) {
+export default function AsteroidsGame({ paused, onStateChange, onGameOver }: RealGameProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const pausedRef = useRef(paused);
   const onStateChangeRef = useRef(onStateChange);
