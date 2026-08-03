@@ -1,1 +1,1 @@
-export const REAL_GAME_IDS = ["asteroids"] as const;
+export const REAL_GAME_IDS = ["asteroids", "tetris"] as const;
