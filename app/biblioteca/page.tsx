@@ -1,22 +1,20 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { GAMES, CATS, fetchGame, type Game } from "../data/games";
+import { CATS, fetchGame, type Game } from "../data/games";
+import { REAL_GAME_IDS } from "../data/real-games";
 import { GameCard } from "../components/game-card";
 
 export default function Home() {
   const [q, setQ] = useState("");
   const [cat, setCat] = useState("TODOS");
-  const [asteroidsGame, setAsteroidsGame] = useState<Game | null>(null);
+  const [games, setGames] = useState<Game[]>([]);
 
   useEffect(() => {
-    fetchGame("asteroids").then(setAsteroidsGame);
+    Promise.all(REAL_GAME_IDS.map((id) => fetchGame(id))).then((results) =>
+      setGames(results.filter((g): g is Game => g !== null)),
+    );
   }, []);
-
-  const games = useMemo(
-    () => GAMES.map((g) => (g.id === "asteroids" && asteroidsGame ? asteroidsGame : g)),
-    [asteroidsGame],
-  );
 
   const filtered = useMemo(() => {
     return games.filter(
