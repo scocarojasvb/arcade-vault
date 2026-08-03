@@ -9,6 +9,9 @@ const BLOCK = 30;
 const W = COLS * BLOCK;
 const H = ROWS * BLOCK;
 const NEXT_SIZE = 120;
+const NEXT_GAP = 20;
+const STAGE_W = W + NEXT_GAP + NEXT_SIZE;
+const STAGE_H = H;
 
 const COLORS: (string | null)[] = [
   null,
@@ -102,7 +105,7 @@ export default function TetrisGame({ paused, onStateChange, onGameOver }: RealGa
     if (!wrap) return;
     const ro = new ResizeObserver(() => {
       const { width, height } = wrap.getBoundingClientRect();
-      if (width > 0 && height > 0) setScale(Math.min(width / W, height / H));
+      if (width > 0 && height > 0) setScale(Math.min(width / STAGE_W, height / STAGE_H));
     });
     ro.observe(wrap);
     return () => ro.disconnect();
@@ -322,7 +325,10 @@ export default function TetrisGame({ paused, onStateChange, onGameOver }: RealGa
           drawBlock(nextCtx, offX + c, offY + r, shape[r][c], NB);
     }
 
+    const CONTROL_KEYS = new Set(["ArrowLeft", "ArrowRight", "ArrowDown", "ArrowUp", "Space"]);
+
     function onKeyDown(e: KeyboardEvent) {
+      if (CONTROL_KEYS.has(e.code)) e.preventDefault();
       if (pausedRef.current || gameOver) return;
       switch (e.code) {
         case "ArrowLeft":
@@ -339,7 +345,6 @@ export default function TetrisGame({ paused, onStateChange, onGameOver }: RealGa
           tryRotate();
           break;
         case "Space":
-          e.preventDefault();
           hardDrop();
           break;
         default:
@@ -400,7 +405,11 @@ export default function TetrisGame({ paused, onStateChange, onGameOver }: RealGa
     <div ref={wrapRef} className="tetris-wrap">
       <div
         className="tetris-stage"
-        style={{ width: W, height: H, transform: `translate(-50%, -50%) scale(${scale})` }}
+        style={{
+          width: STAGE_W,
+          height: STAGE_H,
+          transform: `translate(-50%, -50%) scale(${scale})`,
+        }}
       >
         <canvas ref={canvasRef} width={W} height={H} className="tetris-canvas" />
         <canvas
@@ -408,6 +417,7 @@ export default function TetrisGame({ paused, onStateChange, onGameOver }: RealGa
           width={NEXT_SIZE}
           height={NEXT_SIZE}
           className="tetris-next-canvas"
+          style={{ left: W + NEXT_GAP, width: NEXT_SIZE, height: NEXT_SIZE }}
         />
       </div>
     </div>

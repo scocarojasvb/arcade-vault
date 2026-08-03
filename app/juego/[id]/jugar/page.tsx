@@ -28,6 +28,7 @@ export default function GamePlayerPage() {
   const [over, setOver] = useState(false);
   const [name, setName] = useState(user ? user.name : "INVITADO");
   const [saved, setSaved] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     if (isRealGame || over || paused) return;
@@ -52,6 +53,7 @@ export default function GamePlayerPage() {
     setPaused(false);
     setOver(false);
     setSaved(false);
+    setAttempt((a) => a + 1);
   };
 
   const handleStateChange = (state: RealGameState) => {
@@ -115,6 +117,7 @@ export default function GamePlayerPage() {
         <div className="crt-screen">
           {RealGameComponent ? (
             <RealGameComponent
+              key={attempt}
               paused={paused}
               onStateChange={handleStateChange}
               onGameOver={handleGameOver}
