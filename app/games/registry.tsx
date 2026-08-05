@@ -2,6 +2,7 @@ import type { ComponentType } from "react";
 import AsteroidsGame from "./asteroids/asteroids-game";
 import TetrisGame from "./tetris/tetris-game";
 import ArkanoidGame from "./arkanoid/arkanoid-game";
+import SnakeGame from "./snake/snake-game";
 
 export interface RealGameState {
   score: number;
@@ -20,4 +21,5 @@ export const REAL_GAME_COMPONENTS: Record<string, ComponentType<RealGameProps>> 
   asteroids: AsteroidsGame,
   tetris: TetrisGame,
   arkanoid: ArkanoidGame,
+  snake: SnakeGame,
 };
