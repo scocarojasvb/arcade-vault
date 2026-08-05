@@ -188,6 +188,7 @@ export default function ArkanoidGame({ paused, onStateChange, onGameOver }: Real
     const ctx: CanvasRenderingContext2D = ctx2d;
 
     let internalPaused = false;
+    let cancelled = false;
 
     const paddle = { x: 0, y: 560, w: 81, h: 14 };
     const ball = { x: 0, y: 0, w: 16, h: 16, vx: 200, vy: -300 };
@@ -453,12 +454,14 @@ export default function ArkanoidGame({ paused, onStateChange, onGameOver }: Real
     }
 
     loadSpritesheet(() => {
+      if (cancelled) return;
       initPaddle();
       loadLevel(1);
       rafId = requestAnimationFrame(loop);
     });
 
     return () => {
+      cancelled = true;
       cancelAnimationFrame(rafId);
       canvas.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("keydown", onKeyDown);

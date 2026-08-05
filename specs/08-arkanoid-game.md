@@ -1,6 +1,6 @@
 # SPEC 08 — Juego Arkanoid
 
-> **Estado:** Approved
+> **Estado:** Implementado
 > **Depende de:** SPEC 04 (supabase-setup), SPEC 05 (asteroids-game), SPEC 06 (leaderboard-supabase), SPEC 07 (tetris-game / registro genérico de juegos reales)
 > **Fecha:** 2026-08-05
 > **Objetivo:** Agregar un nuevo juego real "ARKANOID" al catálogo de Arcade Vault, portando fielmente a TypeScript el juego de canvas vanilla JS en `references/started-games/04-arkanoid` (5 niveles, explosiones animadas, sonido y menú de pausa con selección de nivel) como componente cliente registrado en `REAL_GAME_COMPONENTS`.
