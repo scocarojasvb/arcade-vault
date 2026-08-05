@@ -702,6 +702,24 @@ a {
   filter: drop-shadow(0 0 6px rgba(0, 255, 136, 0.6));
 }
 
+.cover-snake-real {
+  background:
+    repeating-linear-gradient(0deg, rgba(0, 255, 136, 0.08) 0 20px, transparent 20px 40px),
+    repeating-linear-gradient(90deg, rgba(0, 255, 136, 0.08) 0 20px, transparent 20px 40px), #06150f;
+}
+.cover-snake-real::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 78% 36%, var(--yellow) 0 7px, transparent 8px),
+    linear-gradient(90deg, var(--green) 0 20px, transparent 20px) 22% 62% / 100px 20px no-repeat,
+    linear-gradient(0deg, var(--green) 0 20px, transparent 20px) calc(22% + 80px) calc(62% - 40px) /
+      20px 60px no-repeat;
+  filter: drop-shadow(0 0 8px rgba(0, 255, 136, 0.7));
+  image-rendering: pixelated;
+}
+
 .cover-glot {
   background: radial-gradient(circle at 50% 50%, #1a002a, #0a0a18);
 }
