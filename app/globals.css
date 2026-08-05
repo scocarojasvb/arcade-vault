@@ -856,6 +856,36 @@ a {
   text-shadow: 0 0 8px var(--cyan);
 }
 
+.cover-arkanoid {
+  background: radial-gradient(circle at 50% 100%, #3a0020, #0a0a18);
+}
+.cover-arkanoid::after {
+  content: "";
+  position: absolute;
+  inset: 12% 15% 0 15%;
+  background:
+    linear-gradient(var(--magenta), var(--magenta)) 0 0/33% 20%,
+    linear-gradient(var(--yellow), var(--yellow)) 33% 0/34% 20%,
+    linear-gradient(var(--magenta), var(--magenta)) 67% 0/33% 20%,
+    linear-gradient(var(--cyan), var(--cyan)) 0 20%/33% 20%,
+    linear-gradient(var(--green), var(--green)) 33% 20%/34% 20%,
+    linear-gradient(var(--cyan), var(--cyan)) 67% 20%/33% 20%;
+  background-repeat: no-repeat;
+  filter: drop-shadow(0 0 8px rgba(255, 0, 110, 0.4));
+  image-rendering: pixelated;
+}
+.cover-arkanoid::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 68%;
+  width: 40px;
+  height: 6px;
+  background: var(--magenta);
+  box-shadow: 0 0 8px var(--magenta);
+  transform: translateX(-50%);
+}
+
 /* ===== detail screen ===== */
 .av-detail {
   display: grid;
