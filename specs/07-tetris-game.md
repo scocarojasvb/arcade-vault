@@ -1,6 +1,6 @@
 # SPEC 07 — Juego Tetris
 
-> **Estado:** Approved
+> **Estado:** Implementado
 > **Depende de:** SPEC 04 (supabase-setup), SPEC 05 (asteroids-game), SPEC 06 (leaderboard-supabase)
 > **Fecha:** 2026-08-03
 > **Objetivo:** Agregar un nuevo juego real "TETRIS" al catálogo de Arcade Vault, portando a TypeScript el juego de canvas vanilla JS en `references/started-games/03-tetris` como componente cliente de Next.js, generalizar el patrón hardcodeado que dejó SPEC 05 (`real-games.ts`/`registry.tsx`) para que tanto Asteroids como Tetris se resuelvan desde un registro común de juegos reales, y hacer que la app solo muestre juegos reales (ocultando el catálogo mock) del catálogo visible.
