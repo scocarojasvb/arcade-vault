@@ -1,6 +1,6 @@
 # SPEC 09 — Juego Snake
 
-> **Estado:** Approved
+> **Estado:** Implemented
 > **Depende de:** SPEC 04 (supabase-setup), SPEC 06 (leaderboard-supabase), SPEC 07 (tetris-game / registro genérico de juegos reales)
 > **Fecha:** 2026-08-05
 > **Objetivo:** Agregar un nuevo juego real "SNAKE" al catálogo de Arcade Vault, diseñado desde cero (sin carpeta de referencia en `references/started-games`) a partir de la descripción del usuario y los assets provistos en `references/source-assets/snake-assets` (spritesheet de frutas `fruits.png` + atlas `sprites.js`), como componente cliente registrado en `REAL_GAME_COMPONENTS`.
@@ -72,19 +72,19 @@ insert into games (id, title, short, long, cat, cover, color, best, plays) value
 
 ## Acceptance criteria
 
-- [ ] La tabla `games` de Supabase contiene la fila `"snake"` con `title`, `short`, `long`, `cat: "ARCADE"`, `color: "green"`, `cover: "cover-snake-real"`, `best`, `plays`.
-- [ ] `app/globals.css` incluye la clase `.cover-snake-real`, visualmente distinta de `.cover-snake` (mock) y de las demás covers.
-- [ ] `/juego/snake` (detalle) funciona igual que los demás juegos reales: muestra info desde Supabase, leaderboard y botón "JUGAR AHORA".
-- [ ] `app/games/snake/snake-game.tsx` existe, compila sin errores de tipos, implementa `RealGameProps`, y no usa variables globales.
-- [ ] `fruits.png` está en `public/games/snake/` y se carga correctamente en el navegador.
-- [ ] Al entrar a `/juego/snake/jugar`, se juega Snake real: mover con flechas/WASD, comer frutas (sprites aleatorios del atlas), crecer, acelerar cada 5 frutas, y chocar con el borde o consigo misma termina el juego de inmediato.
-- [ ] Las teclas de flecha/WASD/espacio no producen scroll de la página mientras se juega.
-- [ ] El HUD superior de React muestra el score (y nivel/velocidad) sin mostrar "Vidas" ni "Líneas".
-- [ ] Al chocar, aparece el modal de fin de partida existente con el score real.
-- [ ] Guardar la puntuación desde el modal inserta correctamente una fila en `scores` de Supabase con `game_id: "snake"`.
-- [ ] `/salon-de-la-fama` incluye un tab para Snake con sus puntuaciones reales.
-- [ ] Asteroids, Tetris, Arkanoid y los juegos mock (incluida "serpentina") siguen funcionando exactamente igual que antes.
-- [ ] `npm run build` completa sin errores de tipos ni de compilación.
+- [x] La tabla `games` de Supabase contiene la fila `"snake"` con `title`, `short`, `long`, `cat: "ARCADE"`, `color: "green"`, `cover: "cover-snake-real"`, `best`, `plays`.
+- [x] `app/globals.css` incluye la clase `.cover-snake-real`, visualmente distinta de `.cover-snake` (mock) y de las demás covers.
+- [x] `/juego/snake` (detalle) funciona igual que los demás juegos reales: muestra info desde Supabase, leaderboard y botón "JUGAR AHORA".
+- [x] `app/games/snake/snake-game.tsx` existe, compila sin errores de tipos, implementa `RealGameProps`, y no usa variables globales.
+- [x] `fruits.png` está en `public/games/snake/` y se carga correctamente en el navegador.
+- [x] Al entrar a `/juego/snake/jugar`, se juega Snake real: mover con flechas/WASD, comer frutas (sprites aleatorios del atlas), crecer, acelerar cada 5 frutas, y chocar con el borde o consigo misma termina el juego de inmediato.
+- [x] Las teclas de flecha/WASD/espacio no producen scroll de la página mientras se juega.
+- [x] El HUD superior de React muestra el score (y nivel/velocidad) sin mostrar "Vidas" ni "Líneas".
+- [x] Al chocar, aparece el modal de fin de partida existente con el score real.
+- [x] Guardar la puntuación desde el modal inserta correctamente una fila en `scores` de Supabase con `game_id: "snake"`.
+- [x] `/salon-de-la-fama` incluye un tab para Snake con sus puntuaciones reales.
+- [x] Asteroids, Tetris, Arkanoid y los juegos mock (incluida "serpentina") siguen funcionando exactamente igual que antes.
+- [x] `npm run build` completa sin errores de tipos ni de compilación.
 
 ## Decisions
 
