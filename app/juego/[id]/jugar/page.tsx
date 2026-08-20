@@ -15,6 +15,8 @@ import {
   skinStorageKey,
   type SkinId,
 } from "../../../games/skins";
+import { useIsTouchDevice } from "../../../games/use-is-touch-device";
+import TouchControls from "../../../games/touch-controls";
 
 /**
  * Store externo mínimo para la skin elegida, persistida por juego en localStorage
@@ -82,6 +84,7 @@ export default function GamePlayerPage() {
     () => DEFAULT_SKIN,
   );
   const chooseSkin = (next: SkinId) => writeSkin(id, next);
+  const isTouchDevice = useIsTouchDevice();
 
   useEffect(() => {
     if (isRealGame || over || paused) return;
@@ -183,43 +186,46 @@ export default function GamePlayerPage() {
 
       <div className="crt">
         <div className="crt-screen">
-          {RealGameComponent ? (
-            <RealGameComponent
-              key={attempt}
-              paused={paused}
-              skin={skin}
-              onStateChange={handleStateChange}
-              onGameOver={handleGameOver}
-            />
-          ) : (
-            <div className="game-arena">
-              <div className="grid-floor"></div>
-              <div className="enemy e1"></div>
-              <div className="enemy e2"></div>
-              <div className="enemy e3"></div>
-              <div className="player-ship"></div>
-            </div>
-          )}
-          {paused && (
-            <div className="crt-content" style={{ background: "rgba(0,0,0,0.6)", zIndex: 5 }}>
-              <div>
-                <div className="pixel neon-yellow" style={{ fontSize: 22 }}>
-                  EN PAUSA
-                </div>
-                <div
-                  className="mono"
-                  style={{
-                    fontSize: 11,
-                    color: "var(--ink-dim)",
-                    marginTop: 10,
-                    letterSpacing: "0.16em",
-                  }}
-                >
-                  PULSA REANUDAR PARA CONTINUAR
+          <div className="game-viewport">
+            {RealGameComponent ? (
+              <RealGameComponent
+                key={attempt}
+                paused={paused}
+                skin={skin}
+                onStateChange={handleStateChange}
+                onGameOver={handleGameOver}
+              />
+            ) : (
+              <div className="game-arena">
+                <div className="grid-floor"></div>
+                <div className="enemy e1"></div>
+                <div className="enemy e2"></div>
+                <div className="enemy e3"></div>
+                <div className="player-ship"></div>
+              </div>
+            )}
+            {paused && (
+              <div className="crt-content" style={{ background: "rgba(0,0,0,0.6)", zIndex: 5 }}>
+                <div>
+                  <div className="pixel neon-yellow" style={{ fontSize: 22 }}>
+                    EN PAUSA
+                  </div>
+                  <div
+                    className="mono"
+                    style={{
+                      fontSize: 11,
+                      color: "var(--ink-dim)",
+                      marginTop: 10,
+                      letterSpacing: "0.16em",
+                    }}
+                  >
+                    PULSA REANUDAR PARA CONTINUAR
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
+          {RealGameComponent && isTouchDevice && <TouchControls />}
         </div>
         <div className="crt-bottom">
           <span className="led">SEÑAL OK</span>
