@@ -2,6 +2,9 @@
 
 import { useEffect, useRef } from "react";
 import type { RealGameProps } from "../registry";
+import { DEFAULT_SKIN, type SkinId } from "../skins";
+import { bakeTintedSheet } from "../skin-utils";
+import { ARKANOID_SKINS } from "./skins";
 
 const W = 800;
 const H = 600;
@@ -164,15 +167,24 @@ const EXPLOSION_DURATION = 150;
 
 type GameState = "playing" | "gameover" | "win";
 
-export default function ArkanoidGame({ paused, onStateChange, onGameOver }: RealGameProps) {
+export default function ArkanoidGame({ paused, skin, onStateChange, onGameOver }: RealGameProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const pausedRef = useRef(paused);
+  const skinRef = useRef<SkinId>(skin ?? DEFAULT_SKIN);
+  /** Re-hornea la hoja tintada y repinta. Lo publica el efecto principal. */
+  const applySkinRef = useRef<(() => void) | null>(null);
   const onStateChangeRef = useRef(onStateChange);
   const onGameOverRef = useRef(onGameOver);
 
   useEffect(() => {
     pausedRef.current = paused;
   }, [paused]);
+  useEffect(() => {
+    skinRef.current = skin ?? DEFAULT_SKIN;
+    // Re-hornear la hoja (nunca por frame) y repintar de inmediato: en pausa o en
+    // game over el loop no dibuja, así que el cambio no se vería hasta reanudar.
+    applySkinRef.current?.();
+  }, [skin]);
   useEffect(() => {
     onStateChangeRef.current = onStateChange;
   }, [onStateChange]);
@@ -211,6 +223,7 @@ export default function ArkanoidGame({ paused, onStateChange, onGameOver }: Real
     let gameOverFired = false;
     let lastEmitted = { score: -1, level: -1, lives: -1 };
 
+    let ssRaw: HTMLImageElement | null = null;
     let ssImg: HTMLCanvasElement | null = null;
     let ssLoaded = false;
 
@@ -390,7 +403,10 @@ export default function ArkanoidGame({ paused, onStateChange, onGameOver }: Real
     }
 
     function draw() {
-      ctx.fillStyle = "#000";
+      const s = ARKANOID_SKINS[skinRef.current];
+
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = s.bg;
       ctx.fillRect(0, 0, W, H);
 
       for (const block of blocks) {
@@ -405,13 +421,16 @@ export default function ArkanoidGame({ paused, onStateChange, onGameOver }: Real
       drawSprite("paddle", paddle.x, paddle.y, paddle.w, paddle.h);
       drawSprite("ball", ball.x, ball.y, ball.w, ball.h);
 
-      ctx.fillStyle = "#fff";
+      ctx.fillStyle = s.hudText;
+      ctx.shadowColor = s.hudText;
+      ctx.shadowBlur = s.glow;
       ctx.font = "bold 18px monospace";
       ctx.textAlign = "left";
       ctx.textBaseline = "top";
       ctx.fillText("Score: " + score, 10, 10);
       ctx.textAlign = "center";
       ctx.fillText("Nivel: " + currentLevel, W / 2, 10);
+      ctx.shadowBlur = 0;
       const ballSize = 16;
       const ballSpacing = 4;
       for (let i = 0; i < lives; i++) {
@@ -438,16 +457,18 @@ export default function ArkanoidGame({ paused, onStateChange, onGameOver }: Real
       draw();
     }
 
+    /** Hornea la hoja con el tinte de la skin activa. Solo al cargar o al cambiar de skin. */
+    function bakeSheet() {
+      if (!ssRaw) return;
+      ssImg = bakeTintedSheet(ssRaw, ARKANOID_SKINS[skinRef.current].tint);
+      ssLoaded = true;
+    }
+
     function loadSpritesheet(cb: () => void) {
       const rawImg = new Image();
       rawImg.onload = () => {
-        const oc = document.createElement("canvas");
-        oc.width = rawImg.width;
-        oc.height = rawImg.height;
-        const octx = oc.getContext("2d");
-        if (octx) octx.drawImage(rawImg, 0, 0);
-        ssImg = oc;
-        ssLoaded = true;
+        ssRaw = rawImg;
+        bakeSheet();
         cb();
       };
       rawImg.src = "/games/arkanoid/spritesheet-breakout.png";
@@ -460,8 +481,14 @@ export default function ArkanoidGame({ paused, onStateChange, onGameOver }: Real
       rafId = requestAnimationFrame(loop);
     });
 
+    applySkinRef.current = () => {
+      bakeSheet();
+      draw();
+    };
+
     return () => {
       cancelled = true;
+      applySkinRef.current = null;
       cancelAnimationFrame(rafId);
       canvas.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("keydown", onKeyDown);

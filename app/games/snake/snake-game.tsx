@@ -2,6 +2,9 @@
 
 import { useEffect, useRef } from "react";
 import type { RealGameProps } from "../registry";
+import { DEFAULT_SKIN, type SkinId } from "../skins";
+import { bakeTintedSheet } from "../skin-utils";
+import { SNAKE_SKINS } from "./skins";
 import {
   FRUITS_SHEET_SRC,
   FRUIT_SPRITES,
@@ -60,15 +63,23 @@ function isOpposite(a: Vec2, b: Vec2) {
   return a.x === -b.x && a.y === -b.y;
 }
 
-export default function SnakeGame({ paused, onStateChange, onGameOver }: RealGameProps) {
+export default function SnakeGame({ paused, skin, onStateChange, onGameOver }: RealGameProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const pausedRef = useRef(paused);
+  const skinRef = useRef<SkinId>(skin ?? DEFAULT_SKIN);
+  const redrawRef = useRef<(() => void) | null>(null);
   const onStateChangeRef = useRef(onStateChange);
   const onGameOverRef = useRef(onGameOver);
 
   useEffect(() => {
     pausedRef.current = paused;
   }, [paused]);
+  useEffect(() => {
+    skinRef.current = skin ?? DEFAULT_SKIN;
+    // Repintar de inmediato: en pausa o en game over el loop no dibuja,
+    // así que el cambio de skin no se vería hasta reanudar.
+    redrawRef.current?.();
+  }, [skin]);
   useEffect(() => {
     onStateChangeRef.current = onStateChange;
   }, [onStateChange]);
@@ -86,6 +97,11 @@ export default function SnakeGame({ paused, onStateChange, onGameOver }: RealGam
     let cancelled = false;
     let fruitsImg: HTMLImageElement | null = null;
     let fruitsLoaded = false;
+    /** Hoja de frutas ya tintada para la skin activa (horneada, no por frame). */
+    const tintedFruits: { sheet: HTMLCanvasElement | null; skin: SkinId | null } = {
+      sheet: null,
+      skin: null,
+    };
 
     let snake: Vec2[] = [];
     let direction: Vec2 = { x: 1, y: 0 };
@@ -179,33 +195,47 @@ export default function SnakeGame({ paused, onStateChange, onGameOver }: RealGam
       emitStateIfChanged();
     }
 
+    /** Hornea la hoja de frutas para la skin activa; solo trabaja si la skin cambió. */
+    function ensureFruitsSheet() {
+      const active = skinRef.current;
+      if (!fruitsLoaded || !fruitsImg) return null;
+      if (!tintedFruits.sheet || tintedFruits.skin !== active) {
+        tintedFruits.sheet = bakeTintedSheet(fruitsImg, SNAKE_SKINS[active].fruitTint);
+        tintedFruits.skin = active;
+      }
+      return tintedFruits.sheet;
+    }
+
     function drawFood() {
       const sprite = FRUIT_SPRITES[food.sprite];
       const dx = food.x * CELL;
       const dy = food.y * CELL;
-      if (fruitsLoaded && fruitsImg) {
-        ctx.drawImage(fruitsImg, sprite.x, sprite.y, sprite.w, sprite.h, dx, dy, CELL, CELL);
+      const sheet = ensureFruitsSheet();
+      if (sheet) {
+        ctx.drawImage(sheet, sprite.x, sprite.y, sprite.w, sprite.h, dx, dy, CELL, CELL);
       }
     }
 
     function drawSnake() {
+      const s = SNAKE_SKINS[skinRef.current];
       snake.forEach((segment, i) => {
         const isHead = i === 0;
-        ctx.fillStyle = isHead ? "#7dffb0" : "#00ff88";
-        ctx.shadowColor = "#00ff88";
-        ctx.shadowBlur = isHead ? 10 : 6;
+        ctx.fillStyle = isHead ? s.head : s.body;
+        ctx.shadowColor = s.glowColor;
+        ctx.shadowBlur = isHead ? s.glowHead : s.glowBody;
         ctx.fillRect(segment.x * CELL + 1, segment.y * CELL + 1, CELL - 2, CELL - 2);
       });
       ctx.shadowBlur = 0;
     }
 
     function draw() {
-      ctx.fillStyle = "#0a0a18";
+      const s = SNAKE_SKINS[skinRef.current];
+      ctx.fillStyle = s.bg;
       ctx.fillRect(0, 0, W, H);
       drawFood();
       drawSnake();
 
-      ctx.fillStyle = "#fff";
+      ctx.fillStyle = s.hudText;
       ctx.font = "bold 18px monospace";
       ctx.textAlign = "left";
       ctx.textBaseline = "top";
@@ -259,13 +289,17 @@ export default function SnakeGame({ paused, onStateChange, onGameOver }: RealGam
 
     loadFruitsSheet(() => {
       if (cancelled) return;
+      // La hoja llegó: repintar por si el loop está detenido (pausa / game over).
+      draw();
     });
 
     init();
+    redrawRef.current = draw;
     rafId = requestAnimationFrame(loop);
 
     return () => {
       cancelled = true;
+      redrawRef.current = null;
       cancelAnimationFrame(rafId);
       window.removeEventListener("keydown", onKeyDown);
     };
