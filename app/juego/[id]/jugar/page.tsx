@@ -1,12 +1,59 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { GAMES, fetchGame, type Game } from "../../../data/games";
 import { useAuth } from "../../../auth-context";
 import { REAL_GAME_IDS } from "../../../data/real-games";
 import { REAL_GAME_COMPONENTS, type RealGameState } from "../../../games/registry";
+import {
+  DEFAULT_SKIN,
+  SKIN_IDS,
+  SKIN_LABELS,
+  isSkinId,
+  skinStorageKey,
+  type SkinId,
+} from "../../../games/skins";
+
+/**
+ * Store externo mínimo para la skin elegida, persistida por juego en localStorage
+ * (clave `av_skin_<id>`, nunca global). Se lee con useSyncExternalStore para que el
+ * render del servidor use siempre DEFAULT_SKIN y la hidratación no rompa —
+ * mismo motivo por el que `app/auth-context.tsx` no lee localStorage en el
+ * inicializador de useState.
+ */
+const skinListeners = new Set<() => void>();
+const skinFallback = new Map<string, SkinId>();
+
+function subscribeSkin(onStoreChange: () => void) {
+  skinListeners.add(onStoreChange);
+  window.addEventListener("storage", onStoreChange);
+  return () => {
+    skinListeners.delete(onStoreChange);
+    window.removeEventListener("storage", onStoreChange);
+  };
+}
+
+function readSkin(gameId: string): SkinId {
+  try {
+    const stored = window.localStorage.getItem(skinStorageKey(gameId));
+    if (isSkinId(stored)) return stored;
+  } catch {
+    /* localStorage no disponible */
+  }
+  return skinFallback.get(gameId) ?? DEFAULT_SKIN;
+}
+
+function writeSkin(gameId: string, next: SkinId) {
+  skinFallback.set(gameId, next);
+  try {
+    window.localStorage.setItem(skinStorageKey(gameId), next);
+  } catch {
+    /* localStorage no disponible: queda solo en memoria */
+  }
+  skinListeners.forEach((notify) => notify());
+}
 
 export default function GamePlayerPage() {
   const { id } = useParams<{ id: string }>();
@@ -29,6 +76,12 @@ export default function GamePlayerPage() {
   const [name, setName] = useState(user ? user.name : "INVITADO");
   const [saved, setSaved] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  const skin = useSyncExternalStore(
+    subscribeSkin,
+    () => readSkin(id),
+    () => DEFAULT_SKIN,
+  );
+  const chooseSkin = (next: SkinId) => writeSkin(id, next);
 
   useEffect(() => {
     if (isRealGame || over || paused) return;
@@ -101,6 +154,21 @@ export default function GamePlayerPage() {
           </div>
         </div>
         <div className="hud-actions">
+          {RealGameComponent && (
+            <div className="hud-skin">
+              <span className="l">Skin</span>
+              {SKIN_IDS.map((s) => (
+                <button
+                  key={s}
+                  className="skin-chip"
+                  aria-pressed={skin === s}
+                  onClick={() => chooseSkin(s)}
+                >
+                  {SKIN_LABELS[s]}
+                </button>
+              ))}
+            </div>
+          )}
           <button className="btn yellow" onClick={() => setPaused((p) => !p)}>
             {paused ? "REANUDAR" : "PAUSA"}
           </button>
@@ -119,6 +187,7 @@ export default function GamePlayerPage() {
             <RealGameComponent
               key={attempt}
               paused={paused}
+              skin={skin}
               onStateChange={handleStateChange}
               onGameOver={handleGameOver}
             />

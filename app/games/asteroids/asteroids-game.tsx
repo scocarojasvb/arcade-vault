@@ -2,6 +2,8 @@
 
 import { useEffect, useRef } from "react";
 import type { RealGameProps } from "../registry";
+import { DEFAULT_SKIN, type SkinId } from "../skins";
+import { ASTEROIDS_SKINS, type AsteroidsSkin } from "./skins";
 
 const W = 800;
 const H = 600;
@@ -48,11 +50,14 @@ class Bullet {
     if (this.ttl <= 0) this.dead = true;
   }
 
-  draw(ctx: CanvasRenderingContext2D) {
-    ctx.fillStyle = "#fff";
+  draw(ctx: CanvasRenderingContext2D, s: AsteroidsSkin) {
+    ctx.fillStyle = s.bullet;
+    ctx.shadowBlur = s.glow;
+    ctx.shadowColor = s.bullet;
     ctx.beginPath();
     ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
     ctx.fill();
+    ctx.shadowBlur = 0;
   }
 }
 
@@ -105,11 +110,13 @@ class Asteroid {
     ];
   }
 
-  draw(ctx: CanvasRenderingContext2D) {
+  draw(ctx: CanvasRenderingContext2D, s: AsteroidsSkin) {
     ctx.save();
     ctx.translate(this.x, this.y);
     ctx.rotate(this.rot);
-    ctx.strokeStyle = "#fff";
+    ctx.strokeStyle = s.asteroid;
+    ctx.shadowBlur = s.glow;
+    ctx.shadowColor = s.asteroid;
     ctx.lineWidth = 1.5;
     ctx.lineJoin = "round";
     ctx.beginPath();
@@ -149,22 +156,27 @@ class PowerUp {
     if (this.ttl <= 0) this.dead = true;
   }
 
-  draw(ctx: CanvasRenderingContext2D) {
+  draw(ctx: CanvasRenderingContext2D, s: AsteroidsSkin) {
     if (this.ttl < 2 && Math.floor(this.ttl * 8) % 2 === 0) return;
     const pulse = 0.85 + Math.sin(performance.now() / 150) * 0.15;
     ctx.save();
     ctx.translate(this.x, this.y);
     ctx.rotate(Math.PI / 4);
-    ctx.strokeStyle = "#0ff";
+    ctx.strokeStyle = s.powerUp;
+    ctx.shadowBlur = s.glow;
+    ctx.shadowColor = s.powerUp;
     ctx.lineWidth = 2;
     const r = this.radius * pulse;
     ctx.strokeRect(-r, -r, r * 2, r * 2);
     ctx.restore();
-    ctx.fillStyle = "#0ff";
+    ctx.fillStyle = s.powerUp;
+    ctx.shadowBlur = s.glow;
+    ctx.shadowColor = s.powerUp;
     ctx.font = "bold 12px monospace";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText("3x", this.x, this.y);
+    ctx.shadowBlur = 0;
   }
 }
 
@@ -235,14 +247,16 @@ class Ship {
     return [new Bullet(ox, oy, this.angle)];
   }
 
-  draw(ctx: CanvasRenderingContext2D) {
+  draw(ctx: CanvasRenderingContext2D, s: AsteroidsSkin) {
     if (this.dead) return;
     if (this.invincible > 0 && Math.floor(this.invincible * 8) % 2 === 0) return;
 
     ctx.save();
     ctx.translate(this.x, this.y);
     ctx.rotate(this.angle);
-    ctx.strokeStyle = "#fff";
+    ctx.strokeStyle = s.ship;
+    ctx.shadowBlur = s.glow;
+    ctx.shadowColor = s.ship;
     ctx.lineWidth = 1.5;
     ctx.lineJoin = "round";
 
@@ -259,7 +273,8 @@ class Ship {
       ctx.moveTo(-8, -4);
       ctx.lineTo(-8 - rand(6, 14), 0);
       ctx.lineTo(-8, 4);
-      ctx.strokeStyle = "rgba(255, 130, 0, 0.85)";
+      ctx.strokeStyle = s.thrust;
+      ctx.shadowColor = s.thrust;
       ctx.stroke();
     }
 
@@ -295,9 +310,9 @@ class Particle {
     if (this.ttl <= 0) this.dead = true;
   }
 
-  draw(ctx: CanvasRenderingContext2D) {
+  draw(ctx: CanvasRenderingContext2D, s: AsteroidsSkin) {
     const alpha = this.ttl / this.life;
-    ctx.strokeStyle = `rgba(255,255,255,${alpha.toFixed(2)})`;
+    ctx.strokeStyle = `rgba(${s.particleRgb},${alpha.toFixed(2)})`;
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(this.x, this.y);
@@ -308,15 +323,23 @@ class Particle {
 
 type GameState = "playing" | "dead" | "gameover";
 
-export default function AsteroidsGame({ paused, onStateChange, onGameOver }: RealGameProps) {
+export default function AsteroidsGame({ paused, skin, onStateChange, onGameOver }: RealGameProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const pausedRef = useRef(paused);
+  const skinRef = useRef<SkinId>(skin ?? DEFAULT_SKIN);
+  const redrawRef = useRef<(() => void) | null>(null);
   const onStateChangeRef = useRef(onStateChange);
   const onGameOverRef = useRef(onGameOver);
 
   useEffect(() => {
     pausedRef.current = paused;
   }, [paused]);
+  useEffect(() => {
+    skinRef.current = skin ?? DEFAULT_SKIN;
+    // Repintar de inmediato: en pausa o en game over el loop no dibuja,
+    // así que el cambio de skin no se vería hasta reanudar.
+    redrawRef.current?.();
+  }, [skin]);
   useEffect(() => {
     onStateChangeRef.current = onStateChange;
   }, [onStateChange]);
@@ -508,11 +531,13 @@ export default function AsteroidsGame({ paused, onStateChange, onGameOver }: Rea
       emitStateIfChanged();
     }
 
-    function drawLifeIcon(x: number, y: number) {
+    function drawLifeIcon(x: number, y: number, s: AsteroidsSkin) {
       ctx.save();
       ctx.translate(x, y);
       ctx.rotate(-Math.PI / 2);
-      ctx.strokeStyle = "#fff";
+      ctx.strokeStyle = s.ship;
+      ctx.shadowBlur = s.glow;
+      ctx.shadowColor = s.ship;
       ctx.lineWidth = 1.2;
       ctx.lineJoin = "round";
       ctx.beginPath();
@@ -525,8 +550,10 @@ export default function AsteroidsGame({ paused, onStateChange, onGameOver }: Rea
       ctx.restore();
     }
 
-    function drawHUD() {
-      ctx.fillStyle = "#fff";
+    function drawHUD(s: AsteroidsSkin) {
+      ctx.fillStyle = s.hudText;
+      ctx.shadowBlur = s.glow;
+      ctx.shadowColor = s.hudText;
       ctx.font = "15px monospace";
 
       ctx.textAlign = "left";
@@ -535,26 +562,32 @@ export default function AsteroidsGame({ paused, onStateChange, onGameOver }: Rea
       ctx.textAlign = "center";
       ctx.fillText(`NIVEL ${level}`, W / 2, 26);
 
-      for (let i = 0; i < lives; i++) drawLifeIcon(W - 16 - i * 22, 18);
+      ctx.shadowBlur = 0;
+      for (let i = 0; i < lives; i++) drawLifeIcon(W - 16 - i * 22, 18, s);
 
       if (ship.tripleShot > 0) {
         ctx.textAlign = "left";
-        ctx.fillStyle = "#0ff";
+        ctx.fillStyle = s.hudAccent;
+        ctx.shadowBlur = s.glow;
+        ctx.shadowColor = s.hudAccent;
         ctx.fillText(`3x  ${ship.tripleShot.toFixed(1)}s`, 14, 46);
+        ctx.shadowBlur = 0;
       }
     }
 
     function draw() {
-      ctx.fillStyle = "#000";
+      const s = ASTEROIDS_SKINS[skinRef.current];
+
+      ctx.fillStyle = s.bg;
       ctx.fillRect(0, 0, W, H);
 
-      particles.forEach((p) => p.draw(ctx));
-      asteroids.forEach((a) => a.draw(ctx));
-      powerUps.forEach((p) => p.draw(ctx));
-      bullets.forEach((b) => b.draw(ctx));
-      ship.draw(ctx);
+      particles.forEach((p) => p.draw(ctx, s));
+      asteroids.forEach((a) => a.draw(ctx, s));
+      powerUps.forEach((p) => p.draw(ctx, s));
+      bullets.forEach((b) => b.draw(ctx, s));
+      ship.draw(ctx, s);
 
-      drawHUD();
+      drawHUD(s);
     }
 
     let lastTime: number | null = null;
@@ -575,9 +608,11 @@ export default function AsteroidsGame({ paused, onStateChange, onGameOver }: Rea
     }
 
     initGame();
+    redrawRef.current = draw;
     rafId = requestAnimationFrame(loop);
 
     return () => {
+      redrawRef.current = null;
       cancelAnimationFrame(rafId);
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
