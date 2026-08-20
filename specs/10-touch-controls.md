@@ -1,6 +1,6 @@
 # SPEC 10 — Controles táctiles
 
-> **Estado:** Approved
+> **Estado:** Implementado
 > **Depende de:** SPEC 05 (asteroids-game), SPEC 07 (tetris-game / registro genérico de juegos reales), SPEC 08 (arkanoid-game), SPEC 09 (snake-game)
 > **Fecha:** 2026-08-20
 > **Objetivo:** Agregar un sistema de controles táctiles (D-pad de 4 direcciones + botón de acción, visualmente idéntico en los 4 juegos) debajo del canvas en `/juego/[id]/jugar`, que se muestra solo en dispositivos con pantalla táctil y reproduce las mismas teclas que cada juego real (Asteroids, Tetris, Arkanoid, Snake) ya escucha, para que los 4 sean completamente jugables en móvil.
