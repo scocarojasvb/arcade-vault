@@ -1088,6 +1088,61 @@ a {
   display: flex;
   gap: 10px;
 }
+.hud-skin {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-right: 10px;
+  margin-right: 4px;
+  border-right: 1px solid var(--line);
+}
+.hud-skin .l {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--ink-faint);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.skin-chip {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 6px 9px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink-dim);
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.skin-chip:hover {
+  color: var(--ink);
+  border-color: var(--cyan);
+}
+.skin-chip[aria-pressed="true"] {
+  color: var(--bg);
+  background: var(--cyan);
+  border-color: var(--cyan);
+  box-shadow: 0 0 10px rgba(0, 245, 255, 0.45);
+}
+@media (max-width: 720px) {
+  .hud-skin {
+    border-right: 0;
+    padding-right: 0;
+    margin-right: 0;
+    flex-wrap: wrap;
+  }
+  .hud-actions {
+    flex-wrap: wrap;
+  }
+  .skin-chip {
+    padding: 5px 7px;
+    letter-spacing: 0.06em;
+  }
+}
 
 .crt {
   position: relative;
