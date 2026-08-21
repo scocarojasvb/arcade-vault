@@ -1,6 +1,6 @@
 # SPEC 12 — Rendimiento del render de Frogger
 
-> **Estado:** Approved
+> **Estado:** Implementado
 > **Depende de:** SPEC 11 (frogger-game)
 > **Fecha:** 2026-08-21
 > **Objetivo:** Diagnosticar y corregir el cuello de botella de rendimiento del bucle de dibujo de Frogger (rectángulos redondeados dibujados a mano con `arcTo` y el glow por `shadowBlur` recalculado cada frame) para sostener ~60fps de forma indefinida en las tres skins y en toda la progresión de niveles, sin cambiar el aspecto visual del juego ni tocar ningún otro juego del catálogo.
