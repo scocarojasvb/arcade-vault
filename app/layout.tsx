@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Press_Start_2P, JetBrains_Mono, Courier_Prime } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "./auth-context";
@@ -24,6 +24,15 @@ const courierFont = Courier_Prime({
 export const metadata: Metadata = {
   title: "Arcade Vault",
   description: "An online gaming platform where players compete for high scores.",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  // Se permite zoom manual (accesibilidad); el D-pad ya bloquea el zoom por gesto
+  // con touch-action: none sobre su propia área.
+  maximumScale: 5,
+  themeColor: "#0a0a0f",
 };
 
 export default function RootLayout({

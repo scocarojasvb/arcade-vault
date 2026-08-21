@@ -2,6 +2,8 @@
 
 import { useEffect, useRef } from "react";
 import type { RealGameProps } from "../registry";
+import { DEFAULT_SKIN, type SkinId } from "../skins";
+import { FROGGER_SKINS } from "./skins";
 
 const CELL = 40;
 const COLS = 20;
@@ -22,7 +24,6 @@ const TURTLE_WIDTH_CELLS = 2;
 const ROAD_VEHICLE_WIDTH_CELLS = [2, 1.5, 2.25, 1.75, 2.5];
 const RIVER_LANE_MULT = [1, 1.35, 0.85, 1.5, 1.1];
 const ROAD_LANE_MULT = [1, 1.4, 0.75, 1.6, 1.05];
-const ROAD_LANE_COLORS = ["#ff006e", "#f5ff00", "#00f5ff", "#00ff88", "#ff006e"];
 
 const DIVE_CYCLE_MS = 5000;
 const DIVE_SUBMERGED_MS = 1300;
@@ -155,15 +156,23 @@ function roundRect(
   ctx.closePath();
 }
 
-export default function FroggerGame({ paused, onStateChange, onGameOver }: RealGameProps) {
+export default function FroggerGame({ paused, skin, onStateChange, onGameOver }: RealGameProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const pausedRef = useRef(paused);
+  const skinRef = useRef<SkinId>(skin ?? DEFAULT_SKIN);
+  const redrawRef = useRef<(() => void) | null>(null);
   const onStateChangeRef = useRef(onStateChange);
   const onGameOverRef = useRef(onGameOver);
 
   useEffect(() => {
     pausedRef.current = paused;
   }, [paused]);
+  useEffect(() => {
+    skinRef.current = skin ?? DEFAULT_SKIN;
+    // El bucle no dibuja mientras está en pausa o tras el game over,
+    // así que el cambio de skin no se vería hasta reanudar.
+    redrawRef.current?.();
+  }, [skin]);
   useEffect(() => {
     onStateChangeRef.current = onStateChange;
   }, [onStateChange]);
@@ -459,7 +468,7 @@ export default function FroggerGame({ paused, onStateChange, onGameOver }: RealG
     }
 
     function drawRoadMarkings() {
-      ctx.strokeStyle = "rgba(245, 255, 0, 0.35)";
+      ctx.strokeStyle = FROGGER_SKINS[skinRef.current].roadMarking;
       ctx.lineWidth = 2;
       ctx.setLineDash([14, 10]);
       ROAD_ROWS.forEach((row) => {
@@ -473,20 +482,21 @@ export default function FroggerGame({ paused, onStateChange, onGameOver }: RealG
     }
 
     function drawPlatforms() {
+      const s = FROGGER_SKINS[skinRef.current];
       RIVER_ROWS.forEach((row) => {
         const lane = lanes[row];
         const y = row * CELL;
         lane.platforms.forEach((p) => {
           if (p.kind === "log") {
-            ctx.fillStyle = "#00f5ff";
-            ctx.shadowColor = "#00f5ff";
-            ctx.shadowBlur = 6;
+            ctx.fillStyle = s.log;
+            ctx.shadowColor = s.log;
+            ctx.shadowBlur = s.glowPlatform;
             roundRect(ctx, p.x, y + 6, p.width, CELL - 12, 6);
             ctx.fill();
           } else {
-            ctx.fillStyle = p.submerged ? "rgba(0, 255, 136, 0.25)" : "#00ff88";
-            ctx.shadowColor = "#00ff88";
-            ctx.shadowBlur = p.submerged ? 0 : 6;
+            ctx.fillStyle = p.submerged ? s.turtleSubmerged : s.turtle;
+            ctx.shadowColor = s.turtle;
+            ctx.shadowBlur = p.submerged ? 0 : s.glowPlatform;
             ctx.beginPath();
             ctx.ellipse(
               p.x + p.width / 2,
@@ -505,14 +515,15 @@ export default function FroggerGame({ paused, onStateChange, onGameOver }: RealG
     }
 
     function drawVehicles() {
+      const s = FROGGER_SKINS[skinRef.current];
       ROAD_ROWS.forEach((row, i) => {
         const lane = lanes[row];
         const y = row * CELL;
-        const color = ROAD_LANE_COLORS[i % ROAD_LANE_COLORS.length];
+        const color = s.vehicles[i % s.vehicles.length];
         lane.vehicles.forEach((v) => {
           ctx.fillStyle = color;
           ctx.shadowColor = color;
-          ctx.shadowBlur = 8;
+          ctx.shadowBlur = s.glowVehicle;
           roundRect(ctx, v.x, y + 8, v.width, CELL - 16, 5);
           ctx.fill();
         });
@@ -521,20 +532,21 @@ export default function FroggerGame({ paused, onStateChange, onGameOver }: RealG
     }
 
     function drawLilypads() {
+      const s = FROGGER_SKINS[skinRef.current];
       LILYPAD_COLS.forEach((col, idx) => {
         const cx = col * CELL + CELL / 2;
         const cy = GOAL_ROW * CELL + CELL / 2;
         ctx.beginPath();
         ctx.ellipse(cx, cy, 15, 11, 0, 0, Math.PI * 2);
-        ctx.shadowColor = "#00ff88";
+        ctx.shadowColor = s.lilypad;
         if (lilypads[idx]) {
-          ctx.fillStyle = "#00ff88";
-          ctx.shadowBlur = 10;
+          ctx.fillStyle = s.lilypad;
+          ctx.shadowBlur = s.glowActor;
           ctx.fill();
         } else {
-          ctx.strokeStyle = "#00ff88";
+          ctx.strokeStyle = s.lilypad;
           ctx.lineWidth = 2;
-          ctx.shadowBlur = 6;
+          ctx.shadowBlur = s.glowPlatform;
           ctx.stroke();
         }
       });
@@ -543,15 +555,16 @@ export default function FroggerGame({ paused, onStateChange, onGameOver }: RealG
 
     function drawFrog() {
       if (!frog.alive) return;
+      const s = FROGGER_SKINS[skinRef.current];
       const y = frog.row * CELL + CELL / 2;
-      ctx.fillStyle = "#00ff88";
-      ctx.shadowColor = "#00ff88";
-      ctx.shadowBlur = 10;
+      ctx.fillStyle = s.frog;
+      ctx.shadowColor = s.frog;
+      ctx.shadowBlur = s.glowActor;
       ctx.beginPath();
       ctx.ellipse(frog.x, y, 15, 13, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.shadowBlur = 0;
-      ctx.fillStyle = "#0a0a0f";
+      ctx.fillStyle = s.frogEye;
       ctx.beginPath();
       ctx.ellipse(frog.x - 6, y - 8, 3.5, 3.5, 0, 0, Math.PI * 2);
       ctx.ellipse(frog.x + 6, y - 8, 3.5, 3.5, 0, 0, Math.PI * 2);
@@ -559,23 +572,24 @@ export default function FroggerGame({ paused, onStateChange, onGameOver }: RealG
     }
 
     function drawBottomStrip() {
+      const s = FROGGER_SKINS[skinRef.current];
       const top = (SPAWN_ROW + 1) * CELL;
-      ctx.fillStyle = "#0f0f18";
+      ctx.fillStyle = s.hudStrip;
       ctx.fillRect(0, top, W, H - top);
 
       const cfg = currentLevelConfig();
       const ratio = Math.max(0, timeLeft / cfg.timeLimit);
-      const barColor = ratio > 0.5 ? "#00ff88" : ratio > 0.2 ? "#f5ff00" : "#ff006e";
-      ctx.fillStyle = "rgba(255, 255, 255, 0.08)";
+      const barColor = ratio > 0.5 ? s.timerHigh : ratio > 0.2 ? s.timerMid : s.timerLow;
+      ctx.fillStyle = s.hudTrack;
       ctx.fillRect(20, top + 10, W - 40, 10);
       ctx.fillStyle = barColor;
       ctx.shadowColor = barColor;
-      ctx.shadowBlur = 6;
+      ctx.shadowBlur = s.glowPlatform;
       ctx.fillRect(20, top + 10, (W - 40) * ratio, 10);
       ctx.shadowBlur = 0;
 
       ctx.font = "bold 12px monospace";
-      ctx.fillStyle = "#e6e9ff";
+      ctx.fillStyle = s.hudText;
       ctx.textAlign = "left";
       ctx.textBaseline = "top";
       ctx.fillText("NENÚFARES", 20, top + 28);
@@ -584,20 +598,21 @@ export default function FroggerGame({ paused, onStateChange, onGameOver }: RealG
         const cy = top + 34;
         ctx.beginPath();
         ctx.ellipse(cx, cy, 8, 6, 0, 0, Math.PI * 2);
-        ctx.fillStyle = filled ? "#00ff88" : "rgba(0, 255, 136, 0.15)";
+        ctx.fillStyle = filled ? s.lilypad : s.padChipEmpty;
         ctx.fill();
       });
     }
 
     function draw() {
-      ctx.fillStyle = "#0a0a0f";
+      const s = FROGGER_SKINS[skinRef.current];
+      ctx.fillStyle = s.bg;
       ctx.fillRect(0, 0, W, H);
 
-      drawLaneBackground(GOAL_ROW, "#04141c");
-      RIVER_ROWS.forEach((row) => drawLaneBackground(row, "#061c2a"));
-      drawLaneBackground(SAFE_ROW, "#0d2a18");
-      ROAD_ROWS.forEach((row) => drawLaneBackground(row, "#141420"));
-      drawLaneBackground(SPAWN_ROW, "#0d2a18");
+      drawLaneBackground(GOAL_ROW, s.laneGoal);
+      RIVER_ROWS.forEach((row) => drawLaneBackground(row, s.laneRiver));
+      drawLaneBackground(SAFE_ROW, s.laneSafe);
+      ROAD_ROWS.forEach((row) => drawLaneBackground(row, s.laneRoad));
+      drawLaneBackground(SPAWN_ROW, s.laneSafe);
 
       drawRoadMarkings();
       drawPlatforms();
@@ -655,10 +670,13 @@ export default function FroggerGame({ paused, onStateChange, onGameOver }: RealG
 
     init();
     draw();
+    // Permite repintar desde el efecto de sync de skin, incluso en pausa o game over.
+    redrawRef.current = draw;
     rafId = requestAnimationFrame(loop);
 
     return () => {
       cancelAnimationFrame(rafId);
+      redrawRef.current = null;
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
     };

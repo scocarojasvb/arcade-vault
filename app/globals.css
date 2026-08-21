@@ -1863,6 +1863,197 @@ a {
   .av-player {
     padding: 0 16px 32px;
   }
+  /* El marco del CRT se comía 48px del ancho disponible para el canvas. */
+  .crt {
+    padding: 16px;
+    border-radius: 20px;
+  }
+  /* Las 3 leyendas + el título del juego (p. ej. "Frogger") no caben en una línea. */
+  .crt-bottom {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 4px 12px;
+  }
+}
+
+/* ===== móvil chico: jugador, detalle y biblioteca ===== */
+@media (max-width: 520px) {
+  /* --- /juego/[id]/jugar --- */
+  /* HUD en columna: las 4 estadísticas quedan 2x2 y las acciones en su propia fila. */
+  .player-hud {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 12px 14px;
+  }
+  /* Contenedor de estadísticas del HUD (div sin clase en jugar/page.tsx). */
+  .player-hud > div:first-child {
+    flex: 1 1 100%;
+  }
+  .player-hud .hud-stat {
+    flex: 1 1 calc(50% - 24px);
+    min-width: 0;
+  }
+  .hud-stat .v {
+    font-size: 13px;
+  }
+  .hud-stat .l {
+    letter-spacing: 0.08em;
+  }
+  .hud-actions {
+    justify-content: space-between;
+  }
+  .hud-skin {
+    flex: 1 1 100%;
+  }
+  .crt {
+    padding: 10px;
+    border-radius: 14px;
+  }
+  .crt-bottom {
+    font-size: 7px;
+    letter-spacing: 0.1em;
+    margin-top: 10px;
+  }
+  .touch-controls {
+    padding: 12px 10px;
+    gap: 10px;
+  }
+  /* Modal de fin de partida: 96vw menos 64px de padding desbordaba la puntuación. */
+  .modal {
+    padding: 22px 16px;
+  }
+  .modal h2 {
+    font-size: 17px;
+    letter-spacing: 0.08em;
+  }
+  .modal .final {
+    font-size: 26px;
+  }
+  .modal .input-row {
+    flex-direction: column;
+    margin: 18px 0 10px;
+  }
+  .modal .actions {
+    flex-direction: column;
+  }
+
+  /* --- /juego/[id] --- */
+  /* 3 columnas de 1fr dejaban ~75px de contenido: "★ ★ ★ ☆ ☆" y las
+     puntuaciones de 16px en fuente pixel desbordaban su celda. */
+  .stat-strip {
+    grid-template-columns: 1fr;
+  }
+  .stat-strip > div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+  }
+  .stat-strip .v {
+    margin-top: 0;
+    font-size: 14px;
+  }
+  /* CTAs a ancho completo en vez de dos botones apretados que se cortan. */
+  .detail-actions {
+    flex-direction: column;
+    margin-top: 12px;
+  }
+  .detail-actions .btn {
+    width: 100%;
+  }
+  .btn.xl {
+    padding: 16px 20px;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+  }
+  .detail-info p {
+    font-size: 13px;
+  }
+  /* La columna fija de 110px no alcanzaba para puntuaciones de 7 dígitos. */
+  .lb-row {
+    grid-template-columns: 30px 1fr auto;
+    gap: 8px;
+    padding: 10px 12px;
+  }
+  .lb-row .sc {
+    font-size: 11px;
+  }
+  .leaderboard h3 {
+    padding: 12px;
+    letter-spacing: 0.1em;
+  }
+
+  /* --- /biblioteca --- */
+  /* auto-fill con minmax(280px, 1fr) desborda cuando el contenedor mide menos
+     de 280px (teléfonos de 320px con los 32px de padding). */
+  .av-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    margin: 24px auto 48px;
+  }
+  /* Buscador arriba a ancho completo y chips debajo, en vez de un wrap irregular. */
+  .av-filters {
+    flex-direction: column;
+    margin-top: 24px;
+  }
+  .av-search {
+    min-width: 0;
+  }
+  /* clamp() con mínimo 28px forzaba el corte de "ARCADE VAULT" en dos líneas. */
+  .av-hero h1 {
+    font-size: clamp(18px, 6vw, 28px);
+  }
+  .card {
+    padding: 12px;
+    gap: 12px;
+  }
+  .card .title {
+    font-size: 12px;
+  }
+  .card .desc {
+    min-height: 0;
+  }
+}
+
+/* Jugador en horizontal: HUD + canvas + D-pad no caben verticalmente en un teléfono
+   acostado, y la escalera max-width no aplica porque el ancho pasa a ser ~700-900px.
+   Única regla del archivo que discrimina por alto, no por ancho. */
+@media (orientation: landscape) and (max-height: 520px) and (pointer: coarse) {
+  .av-player {
+    margin: 10px auto;
+    padding: 0 12px 16px;
+  }
+  .player-hud {
+    padding: 8px 12px;
+    margin-bottom: 10px;
+    gap: 10px 16px;
+  }
+  .hud-stat .v {
+    font-size: 13px;
+  }
+  .crt {
+    padding: 8px;
+    border-radius: 12px;
+  }
+  /* Se conserva el aspect-ratio 4/3 del viewport; el canvas hace letterbox
+     por su object-fit: contain, sin tocar la resolución interna del juego. */
+  .game-viewport {
+    max-height: 56dvh;
+  }
+  .touch-controls {
+    padding: 8px 10px;
+  }
+  .crt-bottom {
+    margin-top: 8px;
+  }
+  /* El modal centrado se recortaba sin poder scrollear con tan poco alto. */
+  .modal-bd {
+    align-items: flex-start;
+    overflow-y: auto;
+    padding: 12px;
+  }
 }
 
 /* ===== HOME PAGE ===== */
@@ -3028,6 +3219,45 @@ a {
   color: var(--ink-faint);
   letter-spacing: 0.14em;
   margin-bottom: 8px;
+}
+
+/* ===== dispositivos táctiles: área de toque mínima 44x44 =====
+   Va al final del archivo a propósito: así gana el desempate por orden
+   frente a las reglas base de igual especificidad. No afecta a desktop
+   (mouse/teclado no matchean pointer: coarse). */
+@media (pointer: coarse) {
+  .btn {
+    min-height: 44px;
+  }
+  /* Chips de skin del HUD (/juego/[id]/jugar). */
+  .skin-chip {
+    min-height: 44px;
+    padding: 6px 12px;
+  }
+  /* Chips de categoría (/biblioteca). */
+  .chip {
+    min-height: 44px;
+    padding: 12px 16px;
+  }
+  .av-search {
+    height: 52px;
+  }
+  .modal .input-row input {
+    height: 48px;
+  }
+  /* El D-pad de SPEC 10 quedaba 2px por debajo del mínimo táctil. */
+  .touch-controls-dpad {
+    grid-template-columns: repeat(3, 44px);
+    grid-template-rows: repeat(3, 44px);
+  }
+  .touch-controls-dpad-btn {
+    width: 44px;
+    height: 44px;
+  }
+  /* El tilt 3D de la tarjeta se quedaba "pegado" tras un tap. */
+  .card:hover {
+    transform: none;
+  }
 }
 
 /* spinner */

@@ -10,6 +10,9 @@ export function GameCard({ game }: { game: Game }) {
   const onMove = (e: React.MouseEvent<HTMLAnchorElement>) => {
     const el = tiltRef.current;
     if (!el) return;
+    // En táctil, el tap emula un mousemove pero no siempre un mouseleave: el tilt
+    // 3D quedaba aplicado como estilo inline (inalcanzable por CSS) al volver atrás.
+    if (window.matchMedia?.("(pointer: coarse)").matches) return;
     const r = el.getBoundingClientRect();
     const px = (e.clientX - r.left) / r.width - 0.5;
     const py = (e.clientY - r.top) / r.height - 0.5;
@@ -44,7 +47,8 @@ export function GameCard({ game }: { game: Game }) {
           </div>
           <span
             className={
-              "btn " + (game.color === "magenta" ? "magenta" : game.color === "yellow" ? "yellow" : "")
+              "btn " +
+              (game.color === "magenta" ? "magenta" : game.color === "yellow" ? "yellow" : "")
             }
           >
             JUGAR
