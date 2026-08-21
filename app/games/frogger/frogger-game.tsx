@@ -139,23 +139,6 @@ interface Frog {
 
 type GameState = "playing" | "gameover";
 
-function roundRect(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  r: number,
-) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.arcTo(x + w, y, x + w, y + h, r);
-  ctx.arcTo(x + w, y + h, x, y + h, r);
-  ctx.arcTo(x, y + h, x, y, r);
-  ctx.arcTo(x, y, x + w, y, r);
-  ctx.closePath();
-}
-
 export default function FroggerGame({ paused, skin, onStateChange, onGameOver }: RealGameProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const pausedRef = useRef(paused);
@@ -491,7 +474,8 @@ export default function FroggerGame({ paused, skin, onStateChange, onGameOver }:
             ctx.fillStyle = s.log;
             ctx.shadowColor = s.log;
             ctx.shadowBlur = s.glowPlatform;
-            roundRect(ctx, p.x, y + 6, p.width, CELL - 12, 6);
+            ctx.beginPath();
+            ctx.roundRect(p.x, y + 6, p.width, CELL - 12, 6);
             ctx.fill();
           } else {
             ctx.fillStyle = p.submerged ? s.turtleSubmerged : s.turtle;
@@ -524,7 +508,8 @@ export default function FroggerGame({ paused, skin, onStateChange, onGameOver }:
           ctx.fillStyle = color;
           ctx.shadowColor = color;
           ctx.shadowBlur = s.glowVehicle;
-          roundRect(ctx, v.x, y + 8, v.width, CELL - 16, 5);
+          ctx.beginPath();
+          ctx.roundRect(v.x, y + 8, v.width, CELL - 16, 5);
           ctx.fill();
         });
       });
