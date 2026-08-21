@@ -904,6 +904,41 @@ a {
   transform: translateX(-50%);
 }
 
+.cover-frogger {
+  background: linear-gradient(180deg, #06202a 0%, #06202a 45%, #0a0a18 45%, #0a0a18 100%);
+}
+.cover-frogger::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(90deg, var(--cyan) 0 24px, transparent 24px 48px) 0 10%/100% 8px
+      no-repeat,
+    repeating-linear-gradient(90deg, var(--cyan) 0 30px, transparent 30px 60px) 0 24%/100% 8px
+      no-repeat,
+    repeating-linear-gradient(90deg, var(--cyan) 0 18px, transparent 18px 36px) 0 38%/100% 8px
+      no-repeat,
+    repeating-linear-gradient(90deg, var(--yellow) 0 16px, transparent 16px 32px) 0 74%/100% 4px
+      no-repeat,
+    radial-gradient(circle at 10% 4%, var(--green) 0 6px, transparent 7px),
+    radial-gradient(circle at 34% 4%, var(--green) 0 6px, transparent 7px),
+    radial-gradient(circle at 58% 4%, var(--green) 0 6px, transparent 7px),
+    radial-gradient(circle at 82% 4%, var(--green) 0 6px, transparent 7px);
+  filter: drop-shadow(0 0 8px rgba(0, 245, 255, 0.5));
+}
+.cover-frogger::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 60%;
+  width: 22px;
+  height: 16px;
+  background: var(--green);
+  border-radius: 50% 50% 40% 40%;
+  box-shadow: 0 0 8px var(--green);
+  transform: translate(-50%, -50%);
+}
+
 /* ===== detail screen ===== */
 .av-detail {
   display: grid;
