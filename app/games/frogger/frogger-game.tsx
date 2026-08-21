@@ -243,6 +243,11 @@ export default function FroggerGame({ paused, onStateChange, onGameOver }: RealG
 
     function setupLevel() {
       timeLeft = currentLevelConfig().timeLimit;
+      // Filas 13-14 (franja inferior del HUD en canvas) no son carriles jugables:
+      // se inicializan inertes para que `lanes` no tenga huecos que `update()` recorra.
+      for (let row = SPAWN_ROW + 1; row < ROWS; row++) {
+        lanes[row] = { row, kind: "safe", dir: 1, speed: 0, gap: 0, vehicles: [], platforms: [] };
+      }
       lanes[GOAL_ROW] = {
         row: GOAL_ROW,
         kind: "goal",
