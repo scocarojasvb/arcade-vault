@@ -50,14 +50,11 @@ class Bullet {
     if (this.ttl <= 0) this.dead = true;
   }
 
-  draw(ctx: CanvasRenderingContext2D, s: AsteroidsSkin) {
-    ctx.fillStyle = s.bullet;
-    ctx.shadowBlur = s.glow;
-    ctx.shadowColor = s.bullet;
+  /** `fillStyle`/glow se izan al bucle de `draw()`: son iguales para todas las balas. */
+  draw(ctx: CanvasRenderingContext2D) {
     ctx.beginPath();
     ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
     ctx.fill();
-    ctx.shadowBlur = 0;
   }
 }
 
@@ -110,15 +107,15 @@ class Asteroid {
     ];
   }
 
-  draw(ctx: CanvasRenderingContext2D, s: AsteroidsSkin) {
+  /**
+   * `strokeStyle`/`lineWidth`/`lineJoin`/glow se izan al bucle de `draw()`: son
+   * idénticos para todos los asteroides del frame, así que reescribirlos por
+   * asteroide era trabajo puro de más (medido: ~30 escrituras de estilo/frame en nivel 9).
+   */
+  draw(ctx: CanvasRenderingContext2D) {
     ctx.save();
     ctx.translate(this.x, this.y);
     ctx.rotate(this.rot);
-    ctx.strokeStyle = s.asteroid;
-    ctx.shadowBlur = s.glow;
-    ctx.shadowColor = s.asteroid;
-    ctx.lineWidth = 1.5;
-    ctx.lineJoin = "round";
     ctx.beginPath();
     ctx.moveTo(this.verts[0][0], this.verts[0][1]);
     for (let i = 1; i < this.verts.length; i++) ctx.lineTo(this.verts[i][0], this.verts[i][1]);
@@ -163,20 +160,27 @@ class PowerUp {
     ctx.translate(this.x, this.y);
     ctx.rotate(Math.PI / 4);
     ctx.strokeStyle = s.powerUp;
-    ctx.shadowBlur = s.glow;
-    ctx.shadowColor = s.powerUp;
+    if (s.glow > 0) {
+      ctx.shadowBlur = s.glow;
+      ctx.shadowColor = s.powerUp;
+    }
     ctx.lineWidth = 2;
+    // Explícito: el bucle de asteroides deja `lineJoin` en "round" fuera de su
+    // `save()`, y el marco del power-up siempre se dibujó con la unión por defecto.
+    ctx.lineJoin = "miter";
     const r = this.radius * pulse;
     ctx.strokeRect(-r, -r, r * 2, r * 2);
     ctx.restore();
     ctx.fillStyle = s.powerUp;
-    ctx.shadowBlur = s.glow;
-    ctx.shadowColor = s.powerUp;
+    if (s.glow > 0) {
+      ctx.shadowBlur = s.glow;
+      ctx.shadowColor = s.powerUp;
+    }
     ctx.font = "bold 12px monospace";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText("3x", this.x, this.y);
-    ctx.shadowBlur = 0;
+    if (s.glow > 0) ctx.shadowBlur = 0;
   }
 }
 
@@ -255,8 +259,10 @@ class Ship {
     ctx.translate(this.x, this.y);
     ctx.rotate(this.angle);
     ctx.strokeStyle = s.ship;
-    ctx.shadowBlur = s.glow;
-    ctx.shadowColor = s.ship;
+    if (s.glow > 0) {
+      ctx.shadowBlur = s.glow;
+      ctx.shadowColor = s.ship;
+    }
     ctx.lineWidth = 1.5;
     ctx.lineJoin = "round";
 
@@ -274,7 +280,7 @@ class Ship {
       ctx.lineTo(-8 - rand(6, 14), 0);
       ctx.lineTo(-8, 4);
       ctx.strokeStyle = s.thrust;
-      ctx.shadowColor = s.thrust;
+      if (s.glow > 0) ctx.shadowColor = s.thrust;
       ctx.stroke();
     }
 
@@ -310,10 +316,16 @@ class Particle {
     if (this.ttl <= 0) this.dead = true;
   }
 
-  draw(ctx: CanvasRenderingContext2D, s: AsteroidsSkin) {
+  /**
+   * `alphas` es la tabla de colores `rgba(...)` pre-generada para la skin actual
+   * (101 pasos de alpha, los mismos 2 decimales que producía `toFixed(2)`): evita
+   * construir un string por partícula y por frame en el camino más caliente del
+   * dibujo. `lineWidth` se iza al bucle de `draw()`.
+   */
+  draw(ctx: CanvasRenderingContext2D, alphas: readonly string[]) {
     const alpha = this.ttl / this.life;
-    ctx.strokeStyle = `rgba(${s.particleRgb},${alpha.toFixed(2)})`;
-    ctx.lineWidth = 1;
+    const step = alpha >= 1 ? 100 : alpha <= 0 ? 0 : Math.round(alpha * 100);
+    ctx.strokeStyle = alphas[step];
     ctx.beginPath();
     ctx.moveTo(this.x, this.y);
     ctx.lineTo(this.x - this.vx * 0.05, this.y - this.vy * 0.05);
@@ -531,15 +543,25 @@ export default function AsteroidsGame({ paused, skin, onStateChange, onGameOver 
       emitStateIfChanged();
     }
 
-    function drawLifeIcon(x: number, y: number, s: AsteroidsSkin) {
+    // Tabla de colores de partícula por skin (101 pasos de alpha), generada una
+    // sola vez por skin y reutilizada; vive como variable de closure, nunca `useState`.
+    let particleAlphas: readonly string[] = [];
+    let particleAlphasFor: SkinId | null = null;
+    function ensureParticleAlphas(s: AsteroidsSkin, id: SkinId): readonly string[] {
+      if (particleAlphasFor !== id) {
+        const table = new Array<string>(101);
+        for (let i = 0; i <= 100; i++) table[i] = `rgba(${s.particleRgb},${(i / 100).toFixed(2)})`;
+        particleAlphas = table;
+        particleAlphasFor = id;
+      }
+      return particleAlphas;
+    }
+
+    /** El estilo del icono (color/glow/grosor) lo iza `drawHUD` fuera del bucle de vidas. */
+    function drawLifeIcon(x: number, y: number) {
       ctx.save();
       ctx.translate(x, y);
       ctx.rotate(-Math.PI / 2);
-      ctx.strokeStyle = s.ship;
-      ctx.shadowBlur = s.glow;
-      ctx.shadowColor = s.ship;
-      ctx.lineWidth = 1.2;
-      ctx.lineJoin = "round";
       ctx.beginPath();
       ctx.moveTo(9, 0);
       ctx.lineTo(-6, -5);
@@ -551,9 +573,12 @@ export default function AsteroidsGame({ paused, skin, onStateChange, onGameOver 
     }
 
     function drawHUD(s: AsteroidsSkin) {
+      const glow = s.glow;
       ctx.fillStyle = s.hudText;
-      ctx.shadowBlur = s.glow;
-      ctx.shadowColor = s.hudText;
+      if (glow > 0) {
+        ctx.shadowBlur = glow;
+        ctx.shadowColor = s.hudText;
+      }
       ctx.font = "15px monospace";
 
       ctx.textAlign = "left";
@@ -562,29 +587,74 @@ export default function AsteroidsGame({ paused, skin, onStateChange, onGameOver 
       ctx.textAlign = "center";
       ctx.fillText(`NIVEL ${level}`, W / 2, 26);
 
-      ctx.shadowBlur = 0;
-      for (let i = 0; i < lives; i++) drawLifeIcon(W - 16 - i * 22, 18, s);
+      if (glow > 0) ctx.shadowBlur = 0;
+
+      // Los 3 iconos de vida comparten color/glow/grosor: se fijan una vez, no por icono.
+      if (lives > 0) {
+        ctx.strokeStyle = s.ship;
+        if (glow > 0) {
+          ctx.shadowBlur = glow;
+          ctx.shadowColor = s.ship;
+        }
+        ctx.lineWidth = 1.2;
+        ctx.lineJoin = "round";
+        for (let i = 0; i < lives; i++) drawLifeIcon(W - 16 - i * 22, 18);
+        if (glow > 0) ctx.shadowBlur = 0;
+      }
 
       if (ship.tripleShot > 0) {
         ctx.textAlign = "left";
         ctx.fillStyle = s.hudAccent;
-        ctx.shadowBlur = s.glow;
-        ctx.shadowColor = s.hudAccent;
+        if (glow > 0) {
+          ctx.shadowBlur = glow;
+          ctx.shadowColor = s.hudAccent;
+        }
         ctx.fillText(`3x  ${ship.tripleShot.toFixed(1)}s`, 14, 46);
-        ctx.shadowBlur = 0;
+        if (glow > 0) ctx.shadowBlur = 0;
       }
     }
 
     function draw() {
-      const s = ASTEROIDS_SKINS[skinRef.current];
+      const skinId = skinRef.current;
+      const s = ASTEROIDS_SKINS[skinId];
+      const glow = s.glow;
 
       ctx.fillStyle = s.bg;
       ctx.fillRect(0, 0, W, H);
 
-      particles.forEach((p) => p.draw(ctx, s));
-      asteroids.forEach((a) => a.draw(ctx, s));
-      powerUps.forEach((p) => p.draw(ctx, s));
-      bullets.forEach((b) => b.draw(ctx, s));
+      // Partículas: solo el `strokeStyle` (alpha) cambia entre ellas; el grosor se iza.
+      if (particles.length > 0) {
+        const alphas = ensureParticleAlphas(s, skinId);
+        ctx.lineWidth = 1;
+        for (let i = 0; i < particles.length; i++) particles[i].draw(ctx, alphas);
+      }
+
+      // Asteroides: color, grosor, unión de línea y glow son iguales para todos.
+      if (asteroids.length > 0) {
+        ctx.strokeStyle = s.asteroid;
+        ctx.lineWidth = 1.5;
+        ctx.lineJoin = "round";
+        if (glow > 0) {
+          ctx.shadowBlur = glow;
+          ctx.shadowColor = s.asteroid;
+        }
+        for (let i = 0; i < asteroids.length; i++) asteroids[i].draw(ctx);
+        if (glow > 0) ctx.shadowBlur = 0;
+      }
+
+      for (let i = 0; i < powerUps.length; i++) powerUps[i].draw(ctx, s);
+
+      // Balas: mismo color y glow para todas.
+      if (bullets.length > 0) {
+        ctx.fillStyle = s.bullet;
+        if (glow > 0) {
+          ctx.shadowBlur = glow;
+          ctx.shadowColor = s.bullet;
+        }
+        for (let i = 0; i < bullets.length; i++) bullets[i].draw(ctx);
+        if (glow > 0) ctx.shadowBlur = 0;
+      }
+
       ship.draw(ctx, s);
 
       drawHUD(s);

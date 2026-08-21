@@ -71,6 +71,10 @@ const PIECES: (number[][] | null)[] = [
 
 const LINE_SCORES = [0, 100, 300, 500, 800];
 
+/** Brillo superior del bloque: constante de módulo, no un literal por bloque y por frame. */
+const BLOCK_HIGHLIGHT = "rgba(255,255,255,0.12)";
+const GRID_LINE = "rgba(255,255,255,0.08)";
+
 type Board = number[][];
 
 interface Piece {
@@ -273,45 +277,100 @@ export default function TetrisGame({ paused, onStateChange, onGameOver }: RealGa
       context.globalAlpha = alpha;
       context.fillStyle = color;
       context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
-      context.fillStyle = "rgba(255,255,255,0.12)";
+      context.fillStyle = BLOCK_HIGHLIGHT;
       context.fillRect(x * size + 1, y * size + 1, size - 2, 4);
       context.globalAlpha = 1;
     }
 
-    function drawGrid() {
-      ctx.strokeStyle = "rgba(255,255,255,0.08)";
-      ctx.lineWidth = 0.5;
+    /**
+     * Fondo + grilla horneados una sola vez a un canvas offscreen: son geometría
+     * constante, así que se componen con un `drawImage` por frame en vez de
+     * repetir 28 `beginPath`/`moveTo`/`lineTo`/`stroke` en cada frame.
+     */
+    const bgCanvas = document.createElement("canvas");
+    bgCanvas.width = W;
+    bgCanvas.height = H;
+    const bgCtx = bgCanvas.getContext("2d");
+    if (bgCtx) {
+      bgCtx.fillStyle = "#000";
+      bgCtx.fillRect(0, 0, W, H);
+      bgCtx.strokeStyle = GRID_LINE;
+      bgCtx.lineWidth = 0.5;
       for (let c = 1; c < COLS; c++) {
-        ctx.beginPath();
-        ctx.moveTo(c * BLOCK, 0);
-        ctx.lineTo(c * BLOCK, ROWS * BLOCK);
-        ctx.stroke();
+        bgCtx.beginPath();
+        bgCtx.moveTo(c * BLOCK, 0);
+        bgCtx.lineTo(c * BLOCK, ROWS * BLOCK);
+        bgCtx.stroke();
       }
       for (let r = 1; r < ROWS; r++) {
-        ctx.beginPath();
-        ctx.moveTo(0, r * BLOCK);
-        ctx.lineTo(COLS * BLOCK, r * BLOCK);
-        ctx.stroke();
+        bgCtx.beginPath();
+        bgCtx.moveTo(0, r * BLOCK);
+        bgCtx.lineTo(COLS * BLOCK, r * BLOCK);
+        bgCtx.stroke();
       }
     }
 
-    function draw() {
-      ctx.fillStyle = "#000";
-      ctx.fillRect(0, 0, W, H);
-      drawGrid();
+    /**
+     * Celdas del frame agrupadas por color: permite escribir `fillStyle` una vez
+     * por color (máx. 8) y `globalAlpha` una vez por pasada, en vez de dos
+     * `fillStyle` + dos `globalAlpha` por bloque. Los buckets se crean una sola
+     * vez y se reutilizan (nunca arrays nuevos por frame).
+     */
+    const cellBuckets: number[][] = Array.from({ length: COLORS.length }, () => []);
 
-      for (let r = 0; r < ROWS; r++)
-        for (let c = 0; c < COLS; c++) drawBlock(ctx, c, r, board[r][c], BLOCK);
+    function collectCell(x: number, y: number, colorIndex: number) {
+      if (!colorIndex || colorIndex >= cellBuckets.length || !COLORS[colorIndex]) return;
+      const bucket = cellBuckets[colorIndex];
+      bucket.push(x, y);
+    }
+
+    /**
+     * Vuelca los buckets: primero el relleno de cada color, luego el brillo
+     * superior de todas las celdas con un único `fillStyle`. Dentro de una misma
+     * pasada las celdas no se solapan entre sí, así que el resultado es idéntico
+     * pixel a pixel al orden anterior (relleno+brillo por bloque).
+     */
+    function flushCells(alpha: number) {
+      let any = false;
+      for (let ci = 1; ci < cellBuckets.length; ci++) {
+        const bucket = cellBuckets[ci];
+        if (!bucket.length) continue;
+        if (!any) {
+          if (alpha !== 1) ctx.globalAlpha = alpha;
+          any = true;
+        }
+        ctx.fillStyle = COLORS[ci] as string;
+        for (let i = 0; i < bucket.length; i += 2)
+          ctx.fillRect(bucket[i] * BLOCK + 1, bucket[i + 1] * BLOCK + 1, BLOCK - 2, BLOCK - 2);
+      }
+      if (!any) return;
+      ctx.fillStyle = BLOCK_HIGHLIGHT;
+      for (let ci = 1; ci < cellBuckets.length; ci++) {
+        const bucket = cellBuckets[ci];
+        if (!bucket.length) continue;
+        for (let i = 0; i < bucket.length; i += 2)
+          ctx.fillRect(bucket[i] * BLOCK + 1, bucket[i + 1] * BLOCK + 1, BLOCK - 2, 4);
+        bucket.length = 0;
+      }
+      if (alpha !== 1) ctx.globalAlpha = 1;
+    }
+
+    function draw() {
+      ctx.drawImage(bgCanvas, 0, 0);
+
+      for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) collectCell(c, r, board[r][c]);
+      flushCells(1);
 
       const gy = ghostY();
       for (let r = 0; r < current.shape.length; r++)
         for (let c = 0; c < current.shape[r].length; c++)
-          if (current.shape[r][c])
-            drawBlock(ctx, current.x + c, gy + r, current.shape[r][c], BLOCK, 0.2);
+          collectCell(current.x + c, gy + r, current.shape[r][c]);
+      flushCells(0.2);
 
       for (let r = 0; r < current.shape.length; r++)
         for (let c = 0; c < current.shape[r].length; c++)
-          drawBlock(ctx, current.x + c, current.y + r, current.shape[r][c], BLOCK);
+          collectCell(current.x + c, current.y + r, current.shape[r][c]);
+      flushCells(1);
     }
 
     function drawNext() {

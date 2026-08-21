@@ -93,6 +93,11 @@ export default function SnakeGame({ paused, skin, onStateChange, onGameOver }: R
     const ctx2d = canvas.getContext("2d");
     if (!ctx2d) return;
     const ctx: CanvasRenderingContext2D = ctx2d;
+    // Estado de texto constante en todo el juego: fijarlo una vez evita que
+    // draw() reescriba (y potencialmente reparsee) la fuente en cada frame.
+    // `textAlign` sí alterna left/center dentro de draw(), así que sigue ahí.
+    ctx.font = "bold 18px monospace";
+    ctx.textBaseline = "top";
 
     let cancelled = false;
     let fruitsImg: HTMLImageElement | null = null;
@@ -217,14 +222,27 @@ export default function SnakeGame({ paused, skin, onStateChange, onGameOver }: R
     }
 
     function drawSnake() {
+      if (snake.length === 0) return;
       const s = SNAKE_SKINS[skinRef.current];
-      snake.forEach((segment, i) => {
-        const isHead = i === 0;
-        ctx.fillStyle = isHead ? s.head : s.body;
-        ctx.shadowColor = s.glowColor;
-        ctx.shadowBlur = isHead ? s.glowHead : s.glowBody;
+      // El color del glow es el mismo para cabeza y cuerpo: se escribe una vez
+      // por frame en vez de una vez por segmento.
+      ctx.shadowColor = s.glowColor;
+
+      // La cabeza se dibuja primero, igual que antes, para que los halos de
+      // glow se superpongan en el mismo orden y el resultado sea idéntico.
+      const head = snake[0];
+      ctx.fillStyle = s.head;
+      ctx.shadowBlur = s.glowHead;
+      ctx.fillRect(head.x * CELL + 1, head.y * CELL + 1, CELL - 2, CELL - 2);
+
+      // El cuerpo comparte color y glow en todos sus segmentos: se izan fuera
+      // del bucle y el bucle indexado evita recrear una arrow function por frame.
+      ctx.fillStyle = s.body;
+      ctx.shadowBlur = s.glowBody;
+      for (let i = 1; i < snake.length; i++) {
+        const segment = snake[i];
         ctx.fillRect(segment.x * CELL + 1, segment.y * CELL + 1, CELL - 2, CELL - 2);
-      });
+      }
       ctx.shadowBlur = 0;
     }
 
@@ -236,9 +254,7 @@ export default function SnakeGame({ paused, skin, onStateChange, onGameOver }: R
       drawSnake();
 
       ctx.fillStyle = s.hudText;
-      ctx.font = "bold 18px monospace";
       ctx.textAlign = "left";
-      ctx.textBaseline = "top";
       ctx.fillText("Score: " + score, 10, 10);
       ctx.textAlign = "center";
       ctx.fillText("Nivel: " + level, W / 2, 10);

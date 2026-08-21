@@ -1,6 +1,6 @@
 # SPEC 11 — FROGGER: clásico por niveles con 3 vidas y temporizador
 
-> **Estado:** Aprobado
+> **Estado:** Implementado
 > **Depende de:** SPEC 04 (supabase-setup), SPEC 06 (leaderboard-supabase), SPEC 07 (tetris-game / registro genérico de juegos reales)
 > **Fecha:** 2026-08-20
 > **Objetivo:** Agregar el juego real "FROGGER" al catálogo de Arcade Vault como una pantalla fija de 15 filas (5 carriles de tráfico + 5 carriles de río) donde el jugador debe llevar 5 ranas a los nenúfares antes de que se agote el temporizador, con 3 vidas y 5 niveles diseñados a mano, dibujado con formas de canvas puro y sin assets nuevos.
