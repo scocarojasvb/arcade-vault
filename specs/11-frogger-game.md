@@ -1,14 +1,9 @@
-# SPEC 10 — FROGGER · variante 1/2: clásico por niveles con 3 vidas y temporizador
+# SPEC 11 — FROGGER: clásico por niveles con 3 vidas y temporizador
 
 > **Estado:** Aprobado
-> **Variante:** 1 de 2 — clásico por niveles con 3 vidas y temporizador (alternativa a `02-frogger-endless-procedural.md`, mutuamente excluyentes)
 > **Depende de:** SPEC 04 (supabase-setup), SPEC 06 (leaderboard-supabase), SPEC 07 (tetris-game / registro genérico de juegos reales)
 > **Fecha:** 2026-08-20
-> **Tema del jam:** Frogger
 > **Objetivo:** Agregar el juego real "FROGGER" al catálogo de Arcade Vault como una pantalla fija de 15 filas (5 carriles de tráfico + 5 carriles de río) donde el jugador debe llevar 5 ranas a los nenúfares antes de que se agote el temporizador, con 3 vidas y 5 niveles diseñados a mano, dibujado con formas de canvas puro y sin assets nuevos.
-> **Promoción:** si se elige esta variante, copiar a `specs/10-frogger-game.md`, cambiar Estado a Approved y quitar las líneas Variante/Promoción del header.
-
-> **Nota sobre la numeración:** el prefijo `01` del nombre de archivo es el **índice de variante dentro de esta corrida del game jam**, no el número global de spec. El número global libre detectado es `10` (último spec en `specs/` plano: `09-snake-game.md`), y solo una de las dos variantes va a aterrizar ahí.
 
 ## Scope
 
