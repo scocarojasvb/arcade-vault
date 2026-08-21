@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import type { RealGameProps } from "../registry";
 import { DEFAULT_SKIN, type SkinId } from "../skins";
-import { FROGGER_SKINS } from "./skins";
+import { FROGGER_SKINS, type FroggerSkin } from "./skins";
 
 const CELL = 40;
 const COLS = 20;
@@ -28,6 +28,9 @@ const ROAD_LANE_MULT = [1, 1.4, 0.75, 1.6, 1.05];
 const DIVE_CYCLE_MS = 5000;
 const DIVE_SUBMERGED_MS = 1300;
 const INFINITE_SPEED_STEP = 0.12;
+
+const ROAD_DASH = [14, 10];
+const NO_DASH: number[] = [];
 
 const CONTROL_CODES = new Set([
   "ArrowLeft",
@@ -139,21 +142,107 @@ interface Frog {
 
 type GameState = "playing" | "gameover";
 
-function roundRect(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
+/**
+ * Sprite de glow horneado una sola vez en un canvas offscreen: la forma se
+ * dibuja con su shadowBlur/shadowColor reales activados, así el resultado es
+ * pixel a pixel igual al de recalcular el blur cada frame. `anchorX`/`anchorY`
+ * son el punto del sprite que corresponde al punto de referencia usado al
+ * dibujar la forma real (esquina superior izquierda para rectángulos, centro
+ * para elipses), para poder componerlo con drawImage sin ningún escalado.
+ */
+interface GlowSprite {
+  canvas: HTMLCanvasElement;
+  anchorX: number;
+  anchorY: number;
+}
+
+interface GlowSpriteCache {
+  logsByWidth: Map<number, GlowSprite>;
+  turtle: GlowSprite;
+  vehiclesByLane: GlowSprite[];
+  lilypadFilled: GlowSprite;
+  lilypadEmpty: GlowSprite;
+  frog: GlowSprite;
+}
+
+function makeRectGlowSprite(
   w: number,
   h: number,
-  r: number,
-) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.arcTo(x + w, y, x + w, y + h, r);
-  ctx.arcTo(x + w, y + h, x, y + h, r);
-  ctx.arcTo(x, y + h, x, y, r);
-  ctx.arcTo(x, y, x + w, y, r);
-  ctx.closePath();
+  radius: number,
+  color: string,
+  blur: number,
+): GlowSprite {
+  const pad = Math.ceil(blur * 2) + 4;
+  const canvas = document.createElement("canvas");
+  canvas.width = w + pad * 2;
+  canvas.height = h + pad * 2;
+  const c = canvas.getContext("2d")!;
+  c.fillStyle = color;
+  c.shadowColor = color;
+  c.shadowBlur = blur;
+  c.beginPath();
+  c.roundRect(pad, pad, w, h, radius);
+  c.fill();
+  return { canvas, anchorX: pad, anchorY: pad };
+}
+
+function makeEllipseGlowSprite(
+  rx: number,
+  ry: number,
+  color: string,
+  blur: number,
+  mode: "fill" | "stroke",
+  lineWidth = 2,
+): GlowSprite {
+  const pad = Math.ceil(blur * 2) + 4 + (mode === "stroke" ? lineWidth : 0);
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.ceil(rx * 2 + pad * 2);
+  canvas.height = Math.ceil(ry * 2 + pad * 2);
+  const c = canvas.getContext("2d")!;
+  c.beginPath();
+  c.ellipse(pad + rx, pad + ry, rx, ry, 0, 0, Math.PI * 2);
+  c.shadowColor = color;
+  c.shadowBlur = blur;
+  if (mode === "fill") {
+    c.fillStyle = color;
+    c.fill();
+  } else {
+    c.strokeStyle = color;
+    c.lineWidth = lineWidth;
+    c.stroke();
+  }
+  return { canvas, anchorX: pad + rx, anchorY: pad + ry };
+}
+
+function buildGlowSprites(s: FroggerSkin): GlowSpriteCache | null {
+  if (s.glowPlatform === 0 && s.glowVehicle === 0 && s.glowActor === 0) return null;
+  const logsByWidth = new Map<number, GlowSprite>();
+  for (const cfg of LEVELS) {
+    const w = cfg.logLength * CELL;
+    if (!logsByWidth.has(w)) {
+      logsByWidth.set(w, makeRectGlowSprite(w, CELL - 12, 6, s.log, s.glowPlatform));
+    }
+  }
+  const turtle = makeEllipseGlowSprite(
+    (TURTLE_WIDTH_CELLS * CELL) / 2,
+    CELL / 2 - 6,
+    s.turtle,
+    s.glowPlatform,
+    "fill",
+  );
+  const vehiclesByLane = ROAD_VEHICLE_WIDTH_CELLS.map((cells, i) =>
+    makeRectGlowSprite(
+      cells * CELL,
+      CELL - 16,
+      5,
+      s.vehicles[i % s.vehicles.length],
+      s.glowVehicle,
+    ),
+  );
+  const lilypadFilled = makeEllipseGlowSprite(15, 11, s.lilypad, s.glowActor, "fill");
+  const lilypadEmpty = makeEllipseGlowSprite(15, 11, s.lilypad, s.glowPlatform, "stroke", 2);
+  const frog = makeEllipseGlowSprite(15, 13, s.frog, s.glowActor, "fill");
+  return { logsByWidth, turtle, vehiclesByLane, lilypadFilled, lilypadEmpty, frog };
 }
 
 export default function FroggerGame({ paused, skin, onStateChange, onGameOver }: RealGameProps) {
@@ -186,6 +275,26 @@ export default function FroggerGame({ paused, skin, onStateChange, onGameOver }:
     const ctx2d = canvas.getContext("2d");
     if (!ctx2d) return;
     const ctx: CanvasRenderingContext2D = ctx2d;
+    // Estado de texto constante en todo el juego: fijarlo una vez evita que
+    // drawBottomStrip lo reescriba (y potencialmente reparsee la fuente) cada frame.
+    ctx.font = "bold 12px monospace";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+
+    // Caché de sprites de glow horneados, indexada por la skin con la que se
+    // construyó. Se reconstruye sola la primera vez que draw() ve una skin
+    // distinta a la de la última construcción (init o cambio de skin vía
+    // skinRef/redrawRef) — nunca useState, es una variable de closure más.
+    let glowSprites: GlowSpriteCache | null = null;
+    let glowSpritesSkin: SkinId | null = null;
+
+    function ensureGlowSprites(): GlowSpriteCache | null {
+      const currentSkin = skinRef.current;
+      if (glowSpritesSkin === currentSkin) return glowSprites;
+      glowSpritesSkin = currentSkin;
+      glowSprites = buildGlowSprites(FROGGER_SKINS[currentSkin]);
+      return glowSprites;
+    }
 
     const lanes: Lane[] = new Array(ROWS);
     const lilypads = [false, false, false, false, false];
@@ -377,28 +486,32 @@ export default function FroggerGame({ paused, skin, onStateChange, onGameOver }:
     function stepLane(lane: Lane, dt: number) {
       const move = lane.dir * lane.speed * dt;
       if (lane.kind === "river") {
-        const width = lane.platforms[0]?.width ?? 0;
+        const platforms = lane.platforms;
+        const width = platforms[0]?.width ?? 0;
         const cycle = width + lane.gap;
-        const span = cycle * lane.platforms.length;
-        lane.platforms.forEach((p) => {
+        const span = cycle * platforms.length;
+        const dive = currentLevelConfig().turtlesDive;
+        for (let i = 0; i < platforms.length; i++) {
+          const p = platforms[i];
           p.x += move;
           if (lane.dir > 0 && p.x > W) p.x -= span;
           if (lane.dir < 0 && p.x + p.width < 0) p.x += span;
           if (p.kind === "turtle") {
             p.diveTimer = (p.diveTimer + dt * 1000) % DIVE_CYCLE_MS;
-            p.submerged =
-              currentLevelConfig().turtlesDive && p.diveTimer > DIVE_CYCLE_MS - DIVE_SUBMERGED_MS;
+            p.submerged = dive && p.diveTimer > DIVE_CYCLE_MS - DIVE_SUBMERGED_MS;
           }
-        });
+        }
       } else if (lane.kind === "road") {
-        const width = lane.vehicles[0]?.width ?? 0;
+        const vehicles = lane.vehicles;
+        const width = vehicles[0]?.width ?? 0;
         const cycle = width + lane.gap;
-        const span = cycle * lane.vehicles.length;
-        lane.vehicles.forEach((v) => {
+        const span = cycle * vehicles.length;
+        for (let i = 0; i < vehicles.length; i++) {
+          const v = vehicles[i];
           v.x += move;
           if (lane.dir > 0 && v.x > W) v.x -= span;
           if (lane.dir < 0 && v.x + v.width < 0) v.x += span;
-        });
+        }
       }
     }
 
@@ -418,11 +531,14 @@ export default function FroggerGame({ paused, skin, onStateChange, onGameOver }:
     }
 
     function isHitByVehicle(lane: Lane, frogX: number): boolean {
-      return lane.vehicles.some((v) => {
+      const vehicles = lane.vehicles;
+      for (let i = 0; i < vehicles.length; i++) {
+        const v = vehicles[i];
         const overlap =
           Math.min(frogX + FROG_HALF, v.x + v.width) - Math.max(frogX - FROG_HALF, v.x);
-        return overlap > 0;
-      });
+        if (overlap > 0) return true;
+      }
+      return false;
     }
 
     function update(dt: number) {
@@ -462,108 +578,132 @@ export default function FroggerGame({ paused, skin, onStateChange, onGameOver }:
       }
     }
 
-    function drawLaneBackground(row: number, color: string) {
-      ctx.fillStyle = color;
-      ctx.fillRect(0, row * CELL, W, CELL);
-    }
-
     function drawRoadMarkings() {
       ctx.strokeStyle = FROGGER_SKINS[skinRef.current].roadMarking;
       ctx.lineWidth = 2;
-      ctx.setLineDash([14, 10]);
-      ROAD_ROWS.forEach((row) => {
-        const y = row * CELL + CELL / 2;
+      ctx.setLineDash(ROAD_DASH);
+      for (let i = 0; i < ROAD_ROWS.length; i++) {
+        const y = ROAD_ROWS[i] * CELL + CELL / 2;
         ctx.beginPath();
         ctx.moveTo(0, y);
         ctx.lineTo(W, y);
         ctx.stroke();
-      });
-      ctx.setLineDash([]);
+      }
+      ctx.setLineDash(NO_DASH);
     }
 
-    function drawPlatforms() {
+    function drawPlatforms(glow: GlowSpriteCache | null) {
       const s = FROGGER_SKINS[skinRef.current];
-      RIVER_ROWS.forEach((row) => {
+      for (let ri = 0; ri < RIVER_ROWS.length; ri++) {
+        const row = RIVER_ROWS[ri];
         const lane = lanes[row];
         const y = row * CELL;
-        lane.platforms.forEach((p) => {
-          if (p.kind === "log") {
-            ctx.fillStyle = s.log;
-            ctx.shadowColor = s.log;
-            ctx.shadowBlur = s.glowPlatform;
-            roundRect(ctx, p.x, y + 6, p.width, CELL - 12, 6);
-            ctx.fill();
+        const platforms = lane.platforms;
+        if (platforms.length === 0) continue;
+        // El tipo de carril (log/turtle) es constante para todas las plataformas
+        // de esta fila, así que el estilo de relleno/glow se fija una sola vez.
+        if (platforms[0].kind === "log") {
+          const sprite = glow?.logsByWidth.get(platforms[0].width);
+          if (sprite) {
+            for (let k = 0; k < platforms.length; k++) {
+              const p = platforms[k];
+              ctx.drawImage(sprite.canvas, p.x - sprite.anchorX, y + 6 - sprite.anchorY);
+            }
           } else {
-            ctx.fillStyle = p.submerged ? s.turtleSubmerged : s.turtle;
-            ctx.shadowColor = s.turtle;
-            ctx.shadowBlur = p.submerged ? 0 : s.glowPlatform;
+            ctx.fillStyle = s.log;
+            for (let k = 0; k < platforms.length; k++) {
+              const p = platforms[k];
+              ctx.beginPath();
+              ctx.roundRect(p.x, y + 6, p.width, CELL - 12, 6);
+              ctx.fill();
+            }
+          }
+        } else {
+          let lastSubmerged: boolean | null = null;
+          for (let k = 0; k < platforms.length; k++) {
+            const p = platforms[k];
+            const cx = p.x + p.width / 2;
+            const cy = y + CELL / 2;
+            if (!p.submerged && glow) {
+              ctx.drawImage(glow.turtle.canvas, cx - glow.turtle.anchorX, cy - glow.turtle.anchorY);
+              lastSubmerged = false;
+              continue;
+            }
+            if (p.submerged !== lastSubmerged) {
+              ctx.fillStyle = p.submerged ? s.turtleSubmerged : s.turtle;
+              lastSubmerged = p.submerged;
+            }
             ctx.beginPath();
-            ctx.ellipse(
-              p.x + p.width / 2,
-              y + CELL / 2,
-              p.width / 2,
-              CELL / 2 - 6,
-              0,
-              0,
-              Math.PI * 2,
-            );
+            ctx.ellipse(cx, cy, p.width / 2, CELL / 2 - 6, 0, 0, Math.PI * 2);
             ctx.fill();
           }
-        });
-      });
-      ctx.shadowBlur = 0;
+        }
+      }
     }
 
-    function drawVehicles() {
+    function drawVehicles(glow: GlowSpriteCache | null) {
       const s = FROGGER_SKINS[skinRef.current];
-      ROAD_ROWS.forEach((row, i) => {
+      for (let ri = 0; ri < ROAD_ROWS.length; ri++) {
+        const row = ROAD_ROWS[ri];
         const lane = lanes[row];
         const y = row * CELL;
-        const color = s.vehicles[i % s.vehicles.length];
-        lane.vehicles.forEach((v) => {
-          ctx.fillStyle = color;
-          ctx.shadowColor = color;
-          ctx.shadowBlur = s.glowVehicle;
-          roundRect(ctx, v.x, y + 8, v.width, CELL - 16, 5);
-          ctx.fill();
-        });
-      });
-      ctx.shadowBlur = 0;
+        const vehicles = lane.vehicles;
+        if (vehicles.length === 0) continue;
+        if (glow) {
+          const sprite = glow.vehiclesByLane[ri];
+          for (let k = 0; k < vehicles.length; k++) {
+            const v = vehicles[k];
+            ctx.drawImage(sprite.canvas, v.x - sprite.anchorX, y + 8 - sprite.anchorY);
+          }
+        } else {
+          // Todos los vehículos de un carril comparten color: se fija una vez.
+          ctx.fillStyle = s.vehicles[ri % s.vehicles.length];
+          for (let k = 0; k < vehicles.length; k++) {
+            const v = vehicles[k];
+            ctx.beginPath();
+            ctx.roundRect(v.x, y + 8, v.width, CELL - 16, 5);
+            ctx.fill();
+          }
+        }
+      }
     }
 
-    function drawLilypads() {
+    function drawLilypads(glow: GlowSpriteCache | null) {
       const s = FROGGER_SKINS[skinRef.current];
-      LILYPAD_COLS.forEach((col, idx) => {
-        const cx = col * CELL + CELL / 2;
-        const cy = GOAL_ROW * CELL + CELL / 2;
+      const cy = GOAL_ROW * CELL + CELL / 2;
+      if (!glow) {
+        // color/ancho de trazo son constantes para las 5 formas: se fijan una sola vez.
+        ctx.fillStyle = s.lilypad;
+        ctx.strokeStyle = s.lilypad;
+        ctx.lineWidth = 2;
+      }
+      for (let i = 0; i < LILYPAD_COLS.length; i++) {
+        const filled = lilypads[i];
+        const cx = LILYPAD_COLS[i] * CELL + CELL / 2;
+        if (glow) {
+          const sprite = filled ? glow.lilypadFilled : glow.lilypadEmpty;
+          ctx.drawImage(sprite.canvas, cx - sprite.anchorX, cy - sprite.anchorY);
+          continue;
+        }
         ctx.beginPath();
         ctx.ellipse(cx, cy, 15, 11, 0, 0, Math.PI * 2);
-        ctx.shadowColor = s.lilypad;
-        if (lilypads[idx]) {
-          ctx.fillStyle = s.lilypad;
-          ctx.shadowBlur = s.glowActor;
-          ctx.fill();
-        } else {
-          ctx.strokeStyle = s.lilypad;
-          ctx.lineWidth = 2;
-          ctx.shadowBlur = s.glowPlatform;
-          ctx.stroke();
-        }
-      });
-      ctx.shadowBlur = 0;
+        if (filled) ctx.fill();
+        else ctx.stroke();
+      }
     }
 
-    function drawFrog() {
+    function drawFrog(glow: GlowSpriteCache | null) {
       if (!frog.alive) return;
       const s = FROGGER_SKINS[skinRef.current];
       const y = frog.row * CELL + CELL / 2;
-      ctx.fillStyle = s.frog;
-      ctx.shadowColor = s.frog;
-      ctx.shadowBlur = s.glowActor;
-      ctx.beginPath();
-      ctx.ellipse(frog.x, y, 15, 13, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.shadowBlur = 0;
+      if (glow) {
+        ctx.drawImage(glow.frog.canvas, frog.x - glow.frog.anchorX, y - glow.frog.anchorY);
+      } else {
+        ctx.fillStyle = s.frog;
+        ctx.beginPath();
+        ctx.ellipse(frog.x, y, 15, 13, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
       ctx.fillStyle = s.frogEye;
       ctx.beginPath();
       ctx.ellipse(frog.x - 6, y - 8, 3.5, 3.5, 0, 0, Math.PI * 2);
@@ -588,19 +728,21 @@ export default function FroggerGame({ paused, skin, onStateChange, onGameOver }:
       ctx.fillRect(20, top + 10, (W - 40) * ratio, 10);
       ctx.shadowBlur = 0;
 
-      ctx.font = "bold 12px monospace";
       ctx.fillStyle = s.hudText;
-      ctx.textAlign = "left";
-      ctx.textBaseline = "top";
       ctx.fillText("NENÚFARES", 20, top + 28);
-      lilypads.forEach((filled, i) => {
+      let lastChipFilled: boolean | null = null;
+      for (let i = 0; i < lilypads.length; i++) {
+        const filled = lilypads[i];
         const cx = 130 + i * 22;
         const cy = top + 34;
         ctx.beginPath();
         ctx.ellipse(cx, cy, 8, 6, 0, 0, Math.PI * 2);
-        ctx.fillStyle = filled ? s.lilypad : s.padChipEmpty;
+        if (filled !== lastChipFilled) {
+          ctx.fillStyle = filled ? s.lilypad : s.padChipEmpty;
+          lastChipFilled = filled;
+        }
         ctx.fill();
-      });
+      }
     }
 
     function draw() {
@@ -608,17 +750,33 @@ export default function FroggerGame({ paused, skin, onStateChange, onGameOver }:
       ctx.fillStyle = s.bg;
       ctx.fillRect(0, 0, W, H);
 
-      drawLaneBackground(GOAL_ROW, s.laneGoal);
-      RIVER_ROWS.forEach((row) => drawLaneBackground(row, s.laneRiver));
-      drawLaneBackground(SAFE_ROW, s.laneSafe);
-      ROAD_ROWS.forEach((row) => drawLaneBackground(row, s.laneRoad));
-      drawLaneBackground(SPAWN_ROW, s.laneSafe);
+      ctx.fillStyle = s.laneGoal;
+      ctx.fillRect(0, GOAL_ROW * CELL, W, CELL);
 
+      // Los 5 carriles de río comparten color de fondo: un solo fillStyle para todos.
+      ctx.fillStyle = s.laneRiver;
+      for (let i = 0; i < RIVER_ROWS.length; i++) {
+        ctx.fillRect(0, RIVER_ROWS[i] * CELL, W, CELL);
+      }
+
+      // s.laneSafe también cubre la fila de aparición (SPAWN_ROW), más abajo.
+      ctx.fillStyle = s.laneSafe;
+      ctx.fillRect(0, SAFE_ROW * CELL, W, CELL);
+
+      ctx.fillStyle = s.laneRoad;
+      for (let i = 0; i < ROAD_ROWS.length; i++) {
+        ctx.fillRect(0, ROAD_ROWS[i] * CELL, W, CELL);
+      }
+
+      ctx.fillStyle = s.laneSafe;
+      ctx.fillRect(0, SPAWN_ROW * CELL, W, CELL);
+
+      const glow = ensureGlowSprites();
       drawRoadMarkings();
-      drawPlatforms();
-      drawVehicles();
-      drawLilypads();
-      drawFrog();
+      drawPlatforms(glow);
+      drawVehicles(glow);
+      drawLilypads(glow);
+      drawFrog(glow);
       drawBottomStrip();
     }
 
