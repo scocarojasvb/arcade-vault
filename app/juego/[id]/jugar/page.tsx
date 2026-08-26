@@ -242,23 +242,31 @@ export default function GamePlayerPage() {
             <div className="final-label">PUNTUACIÓN FINAL</div>
             <div className="final">{score.toLocaleString("es-ES")}</div>
             {!saved ? (
-              <div className="input-row">
-                <input
-                  value={name}
-                  onChange={(e) => setGuestName(e.target.value.toUpperCase().slice(0, 10))}
-                  placeholder="TUS INICIALES"
-                  disabled={!!user}
-                />
-                <button
-                  className="btn yellow"
-                  onClick={() => {
-                    saveScore({ game: game.id, score, name });
-                    setSaved(true);
-                  }}
-                >
-                  GUARDAR PUNTUACIÓN
-                </button>
-              </div>
+              user === null ? (
+                <div className="input-row">
+                  <Link href="/auth" className="btn yellow">
+                    INICIAR SESIÓN PARA GUARDAR
+                  </Link>
+                </div>
+              ) : (
+                <div className="input-row">
+                  <input
+                    value={name}
+                    onChange={(e) => setGuestName(e.target.value.toUpperCase().slice(0, 10))}
+                    placeholder="TUS INICIALES"
+                    disabled={!!user}
+                  />
+                  <button
+                    className="btn yellow"
+                    onClick={() => {
+                      saveScore({ game: game.id, score, name });
+                      setSaved(true);
+                    }}
+                  >
+                    GUARDAR PUNTUACIÓN
+                  </button>
+                </div>
+              )
             ) : (
               <div className="toast-saved">▸ PUNTUACIÓN GUARDADA_</div>
             )}
