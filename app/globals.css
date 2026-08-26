@@ -1655,6 +1655,13 @@ a {
   padding: 12px;
   font-size: 9px;
 }
+.auth-error {
+  margin-top: 14px;
+  color: var(--magenta);
+  font-size: 12px;
+  letter-spacing: 0.03em;
+  text-align: center;
+}
 
 /* ===== salón ===== */
 .av-hall {
