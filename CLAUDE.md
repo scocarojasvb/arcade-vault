@@ -40,8 +40,9 @@ Each agent's own file is the contract — read it before invoking, don't infer s
 - **`skin-designer`** — audits and implements the missing `classic`/`neon`/`retro` skins per game. Writes code (`app/games/skins.ts`, per-game `app/games/<id>/skins.ts`, HUD selector). Memory: `references/games-with-theme.md`. → `.claude/agents/skin-designer.md`
 - **`mobile-porter`** — makes the 7 real routes work on mobile (CSS inside `@media`, pages, only the canvas wrapper — never game logic or resolution constants). Memory: `references/mobile-ready-pages.md`. → `.claude/agents/mobile-porter.md`
 - **`game-performance`** — profiles a game's draw loop (Chrome headless + CDP Tracing) before touching code, applies the Frogger-proven fix playbook, re-measures. Never changes mechanics, collisions, scoring or timing. Memory: `references/games-performance.md`. → `.claude/agents/game-performance.md`
+- **`security-auditor`** — audits app/DB security across 4 domains (Supabase RLS/policies, Auth/sessions, HTTP headers/input validation, secrets/dependencies) against real evidence (Supabase advisors, `pg_policies`, deterministic greps, `npm audit`) and reports prioritized findings with proposed SQL/diffs. Read-only except its memory. Memory: `references/security/audit-status.md`. → `.claude/agents/security-auditor.md`
 
-`skin-designer` and `mobile-porter` must never run in parallel — both can touch `app/juego/[id]/jugar/page.tsx` and `app/globals.css`.
+`skin-designer` and `mobile-porter` must never run in parallel — both can touch `app/juego/[id]/jugar/page.tsx` and `app/globals.css`. `security-auditor` is safe to run alongside any other agent — it never writes to `app/` or `app/globals.css`.
 
 ## Architecture
 
