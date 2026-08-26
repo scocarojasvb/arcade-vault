@@ -1,15 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "../lib/supabase/client";
 
 type ErrorKind = "invalid" | "unconfirmed" | "generic";
 type ResendState = "idle" | "sending" | "sent";
 
-export default function AuthPage() {
+function AuthForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [tab, setTab] = useState<"in" | "up">("in");
 
   const [nickname, setNickname] = useState("");
@@ -17,8 +18,14 @@ export default function AuthPage() {
   const [pass, setPass] = useState("");
 
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [errorKind, setErrorKind] = useState<ErrorKind | null>(null);
+  const [error, setError] = useState<string | null>(() =>
+    searchParams.get("error") === "oauth"
+      ? "No se pudo iniciar sesión con el proveedor. Intentá de nuevo."
+      : null,
+  );
+  const [errorKind, setErrorKind] = useState<ErrorKind | null>(() =>
+    searchParams.get("error") === "oauth" ? "generic" : null,
+  );
 
   const [awaitingConfirmation, setAwaitingConfirmation] = useState(false);
   const [resendState, setResendState] = useState<ResendState>("idle");
@@ -293,5 +300,13 @@ export default function AuthPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function AuthPage() {
+  return (
+    <Suspense fallback={null}>
+      <AuthForm />
+    </Suspense>
   );
 }
