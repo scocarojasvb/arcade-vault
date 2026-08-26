@@ -280,6 +280,48 @@ a {
 .av-nav .auth-btn {
   margin-left: 16px;
 }
+.av-nav .account-menu {
+  position: relative;
+  margin-left: 16px;
+}
+.av-nav .account-menu .auth-btn {
+  margin-left: 0;
+}
+.av-nav .account-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 60;
+  min-width: 220px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+.av-nav .account-dropdown-email {
+  padding: 8px 10px;
+  font-size: 11px;
+  color: var(--ink-dim);
+  border-bottom: 1px dashed var(--line-2);
+  word-break: break-all;
+}
+.av-nav .account-dropdown-item {
+  padding: 10px;
+  font-family: var(--pixel);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  color: var(--magenta);
+  text-align: left;
+  cursor: pointer;
+  transition: color 120ms;
+}
+.av-nav .account-dropdown-item:hover {
+  color: var(--ink);
+}
 .av-nav .hamburger {
   display: none;
 }
@@ -325,6 +367,21 @@ a {
 }
 .av-mobile-panel a.active {
   color: var(--cyan);
+}
+.av-mobile-account {
+  padding: 14px 12px 4px;
+  font-size: 11px;
+  color: var(--ink);
+}
+.av-mobile-logout {
+  padding: 14px 12px;
+  font-family: var(--pixel);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: var(--magenta);
+  text-align: left;
+  border-bottom: 1px dashed var(--line-2);
+  cursor: pointer;
 }
 .av-mobile-backdrop {
   position: fixed;

@@ -1,9 +1,10 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "../lib/supabase/client";
+import { useAuth } from "../auth-context";
 
 type ErrorKind = "invalid" | "unconfirmed" | "generic";
 type ResendState = "idle" | "sending" | "sent";
@@ -11,6 +12,7 @@ type ResendState = "idle" | "sending" | "sent";
 function AuthForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { user, loading: authLoading } = useAuth();
   const [tab, setTab] = useState<"in" | "up">("in");
 
   const [nickname, setNickname] = useState("");
@@ -29,6 +31,12 @@ function AuthForm() {
 
   const [awaitingConfirmation, setAwaitingConfirmation] = useState(false);
   const [resendState, setResendState] = useState<ResendState>("idle");
+
+  useEffect(() => {
+    if (!authLoading && user) {
+      router.replace("/biblioteca");
+    }
+  }, [authLoading, user, router]);
 
   const switchTab = (next: "in" | "up") => {
     setTab(next);
@@ -68,16 +76,27 @@ function AuthForm() {
     setLoading(true);
 
     const supabase = createClient();
-    const { error: authError } = await supabase.auth.signUp({
+    const { data, error: authError } = await supabase.auth.signUp({
       email,
       password: pass,
-      options: { data: { name: (nickname || "PLAYER1").toUpperCase().slice(0, 10) } },
+      options: {
+        data: { name: (nickname || "PLAYER1").toUpperCase().slice(0, 10) },
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+      },
     });
 
     setLoading(false);
 
     if (authError) {
       setError(authError.message || "No se pudo crear la cuenta, intenta de nuevo.");
+      setErrorKind("generic");
+      return;
+    }
+
+    if (data.user && data.user.identities?.length === 0) {
+      setError(
+        "Ese correo ya tiene una cuenta. Iniciá sesión con Google o GitHub, o usá el enlace de recuperar contraseña.",
+      );
       setErrorKind("generic");
       return;
     }
@@ -110,6 +129,10 @@ function AuthForm() {
   const playAsGuest = () => {
     router.push("/biblioteca");
   };
+
+  if (authLoading || user) {
+    return null;
+  }
 
   if (awaitingConfirmation) {
     return (
@@ -214,6 +237,7 @@ function AuthForm() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="jugador@vault.gg"
+              required
             />
           </div>
           <div className="field">
@@ -223,6 +247,8 @@ function AuthForm() {
               value={pass}
               onChange={(e) => setPass(e.target.value)}
               placeholder="••••••••"
+              required
+              minLength={6}
             />
           </div>
 

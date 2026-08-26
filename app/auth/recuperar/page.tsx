@@ -1,14 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "../../lib/supabase/client";
+import { useAuth } from "../../auth-context";
 
 export default function RecuperarPage() {
+  const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
+
+  useEffect(() => {
+    if (!authLoading && user) {
+      router.replace("/biblioteca");
+    }
+  }, [authLoading, user, router]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,6 +39,10 @@ export default function RecuperarPage() {
 
     setSent(true);
   };
+
+  if (authLoading || user) {
+    return null;
+  }
 
   return (
     <div className="av-auth-wrap fade-in">

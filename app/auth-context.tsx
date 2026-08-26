@@ -19,6 +19,7 @@ export interface SavedScore {
 
 interface AuthContextValue {
   user: User | null;
+  loading: boolean;
   logout: () => Promise<void>;
   saveScore: (entry: Omit<SavedScore, "at">) => void;
 }
@@ -38,12 +39,14 @@ function toUser(supabaseUser: SupabaseUser | null): User | null {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const supabase = createClient();
 
     supabase.auth.getUser().then(({ data }) => {
       setUser(toUser(data.user));
+      setLoading(false);
     });
 
     const {
@@ -78,7 +81,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, logout, saveScore }}>{children}</AuthContext.Provider>
+    <AuthContext.Provider value={{ user, loading, logout, saveScore }}>
+      {children}
+    </AuthContext.Provider>
   );
 }
 
