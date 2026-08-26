@@ -1,10 +1,13 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import type { User as SupabaseUser } from "@supabase/supabase-js";
 import { createClient } from "./lib/supabase/client";
 
 export interface User {
-  name: string;
+  id: string; // auth.users.id (uuid), viene de la sesión real de Supabase
+  email: string;
+  name: string; // nickname, leído de user_metadata.name
 }
 
 export interface SavedScore {
@@ -16,55 +19,66 @@ export interface SavedScore {
 
 interface AuthContextValue {
   user: User | null;
-  scores: SavedScore[];
-  login: (user: User) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
   saveScore: (entry: Omit<SavedScore, "at">) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+function toUser(supabaseUser: SupabaseUser | null): User | null {
+  if (!supabaseUser || !supabaseUser.email) return null;
+  const metaName =
+    typeof supabaseUser.user_metadata?.name === "string" ? supabaseUser.user_metadata.name : "";
+  return {
+    id: supabaseUser.id,
+    email: supabaseUser.email,
+    name: metaName || supabaseUser.email.split("@")[0],
+  };
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [scores, setScores] = useState<SavedScore[]>([]);
 
   useEffect(() => {
-    try {
-      setUser(JSON.parse(localStorage.getItem("av_user") || "null"));
-    } catch {
-      setUser(null);
-    }
+    const supabase = createClient();
+
+    supabase.auth.getUser().then(({ data }) => {
+      setUser(toUser(data.user));
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(toUser(session?.user ?? null));
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
-  const login = (u: User) => {
-    setUser(u);
-    try {
-      localStorage.setItem("av_user", JSON.stringify(u));
-    } catch {}
-  };
-
-  const logout = () => {
-    setUser(null);
-    try {
-      localStorage.removeItem("av_user");
-    } catch {}
+  const logout = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
   };
 
   const saveScore = (entry: Omit<SavedScore, "at">) => {
-    setScores((prev) => [...prev, { ...entry, at: Date.now() }]);
     const supabase = createClient();
     supabase
       .from("scores")
-      .insert({ game_id: entry.game, name: entry.name, score: entry.score, user_id: null })
+      .insert({
+        game_id: entry.game,
+        name: entry.name,
+        score: entry.score,
+        user_id: user?.id ?? null,
+      })
       .then(({ error }) => {
         if (error) console.error("saveScore: insert failed", error);
       });
   };
 
   return (
-    <AuthContext.Provider value={{ user, scores, login, logout, saveScore }}>
-      {children}
-    </AuthContext.Provider>
+    <AuthContext.Provider value={{ user, logout, saveScore }}>{children}</AuthContext.Provider>
   );
 }
 
