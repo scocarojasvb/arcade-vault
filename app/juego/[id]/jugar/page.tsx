@@ -75,7 +75,8 @@ export default function GamePlayerPage() {
   const [level, setLevel] = useState(1);
   const [paused, setPaused] = useState(false);
   const [over, setOver] = useState(false);
-  const [name, setName] = useState(user ? user.name : "INVITADO");
+  const [guestName, setGuestName] = useState("INVITADO");
+  const name = user ? user.name : guestName;
   const [saved, setSaved] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const skin = useSyncExternalStore(
@@ -244,8 +245,9 @@ export default function GamePlayerPage() {
               <div className="input-row">
                 <input
                   value={name}
-                  onChange={(e) => setName(e.target.value.toUpperCase().slice(0, 10))}
+                  onChange={(e) => setGuestName(e.target.value.toUpperCase().slice(0, 10))}
                   placeholder="TUS INICIALES"
+                  disabled={!!user}
                 />
                 <button
                   className="btn yellow"
